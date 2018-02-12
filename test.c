@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <x86intrin.h>
 
-int main() {
+void test_fips192() {
     EcEd cur;
     EcPoint G, H, A, B, Z;
     BigInt n, d, p;
@@ -67,6 +67,15 @@ int main() {
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
     printf("Scalar Mul(Ord.) time: %d\n", e-s);
-    
+
+    EcEdGenerateBasePoint(&cur, &B);
+    int isOnCurve = EcEdCheckPointOnCurve(&cur, &B);
+    printf("Generated point, on curve: %d\n", isOnCurve);
+    GFDump(&cur, B.x);
+    GFDump(&cur, B.y);
+}
+
+int main() {
+    test_fips192();
     return 0;
 }

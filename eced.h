@@ -46,9 +46,13 @@ void GFAdd(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c);
 void GFSub(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c);
 void GFPow(EcEd* ecc, GFElement a, BigInt n, GFElement b);
 void GFInv(EcEd* ecc, GFElement a, GFElement b);
+int  GFCmp(EcEd* ecc, GFElement a, GFElement b);
+void GFMul(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c);
+void GFSqr(EcEd* ecc, GFElement a, _out_ GFElement c);
 
 int  EcEdInit(EcEd* ecc, EcPoint* bp, u64 bitLen, BigInt n, GFElement d);
 void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp);
+int  EcEdCheckPointOnCurve(EcEd* ecc,EcPoint*);
 
 void EcEdAdd(EcEd* ecc, EcPoint* A, EcPoint* B, _out_ EcPoint* C);
 void EcEdDouble(EcEd* ecc, EcPoint* A, _out_ EcPoint* B);
