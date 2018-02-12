@@ -267,31 +267,22 @@ void GFSub(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 void GFMul_FIPS192(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
     GFElement tmp;
     mul(ecc, a, b, tmp);
-    /*for (int i=2*ecc->wordLen-1;i>=0; i--) {
-        printf(HEX_FORMAT, tmp[i]);
-    }
-    printf("\n");*/
     copy(c, tmp, 2*ecc->wordLen);
-    //GFDump(ecc, c);
     u64 carry = 0;
     tmp[0] = c[3];
     tmp[1] = c[3];
     tmp[2] = 0;
     carry += add(3, c, tmp, c);
-    //GFDump(ecc, c);
     tmp[0] = 0;
     tmp[1] = c[4];
     tmp[2] = c[4];
     carry = add(3, c, tmp, c);
     if (carry) sub(ecc->wordLen, c, ecc->p, c);
-    //GFDump(ecc, c);
     tmp[0] = c[5];
     tmp[1] = c[5];
     tmp[2] = c[5];
     carry = add(3, c, tmp, c);
-    //GFDump(ecc, c);
     if (carry) sub(ecc->wordLen, c, ecc->p, c);
-    //GFDump(ecc, c);
     if ((c[2] == 0xFFFFFFFFFFFFFFFF) && (c[1] == 0xFFFFFFFFFFFFFFFF)) {
         sub(ecc->wordLen, c, ecc->p, c);
     }
@@ -365,7 +356,6 @@ void GFMulBy2(EcEd* ecc, GFElement a, GFElement b) {
     mul2(ecc->wordLen, b);
     if (ecc->bitLen % 64 == 0) {
         carry = b[ecc->wordLen] & 1;
-        //printf("CARRY %d!", carry);
     }
     else {
         carry = (b[ ecc->wordLen -1 ] & (1UL<<32) );
@@ -383,8 +373,6 @@ void GFPow(EcEd* ecc, GFElement a, BigInt n, GFElement b) {
     for (u64 i=0; i<ecc->bitLen; i++) {
         if (get_bit(n, i)) {
             GFMul(ecc, tmp2, tmp, tmp2);
-            //printf("%d : ", i);
-            //GFDump(ecc, tmp2);
         }
         GFSqr(ecc, tmp, tmp);
     }
@@ -483,48 +471,23 @@ void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp) {
 void EcEdAdd(EcEd* ecc, EcPoint* A, EcPoint* B, _out_ EcPoint* C) {
     GFElement z1, z2, z3, z4, z5, z6, z7;
     GFMul(ecc, A->x, B->x, z1); // z1 = x1 * x2
-    //printf("z1\n");
-    //GFDump(ecc, z1);
     GFMul(ecc, A->y, B->y, z2); // z2 = y1 * y2
-    //printf("z2\n");
-    //GFDump(ecc, z2);
     GFMul(ecc, z1, z2, z3); 
     GFMul(ecc, z3, ecc->d, z3); // z3 = d * x1 * x2 * y1 * y2
-    //printf("z3\n");
-    //GFDump(ecc, z3);
-
     GFNeg(ecc, z3, z4); // z4 = - z3
-    //printf("z4\n");
-    //GFDump(ecc, z4);
-    //inc(ecc->wordLen, z3);
     GFAdd(ecc, z3, unity, z3);
-    //printf("z3\n");
-    //GFDump(ecc, z3);
 
     GFInv(ecc, z3, z3);
-    //printf("z3\n");
-    //GFDump(ecc, z3);
 
     GFAdd(ecc, z4, unity, z4);
-    //printf("z4\n");
-    //GFDump(ecc, z4);
 
     GFInv(ecc, z4, z4);
-    //printf("z4\n");
-    //GFDump(ecc, z4);
 
     GFMul(ecc, A->x, B->y, z5); // z5 = x1 * y2
-    //printf("z5\n");
-    //GFDump(ecc, z5);
     GFMul(ecc, A->y, B->x, z6); // z6 = x2 * y1
-    //printf("z6\n");
-    //GFDump(ecc, z6);
     GFAdd(ecc, z5, z6, z5);
     GFSub(ecc, z2, z1, z2);
-    //printf("z2 z4\n");
 
-    //GFDump(ecc, z2);
-    //GFDump(ecc, z4);
     GFMul(ecc, z5, z3, C->x);
     GFMul(ecc, z2, z4, C->y);
 }
@@ -555,22 +518,11 @@ void EcEdScalarMulOrdinary(EcEd* ecc, EcPoint* A, BigInt k, _out_ EcPoint* B) {
     for (u32 i=0; i<ecc->bitLen; i++) {
         if (get_bit(k, i)) {
             EcEdAdd(ecc, &P, &H, &P);
-            /*printf("%d : ", i);
-            GFDump(ecc, P.x);
-            GFDump(ecc, P.y);
-            printf("\n");*/
         }
         EcEdDouble(ecc, &H, &H); 
-        /*printf("%d_ : ", i);
-        GFDump(ecc, H.x);
-        GFDump(ecc, H.y);
-        printf("\n");*/
     }
-
     copy_point(B, &P, ecc->wordLen);
 }
-
-
 
 void EcEdConvertAffineToProjective(EcEd* ecc, EcPoint* P, EcPointProj* Q) {
     randomize(ecc->wordLen, Q->Z);
@@ -644,17 +596,8 @@ void EcEdScalarMul(EcEd* ecc, EcPoint* A, BigInt k, _out_ EcPoint* B) {
     for (u32 i=0; i<ecc->bitLen; i++) {
         if (get_bit(k, i)) {
             EcEdAddProj(ecc, &P, &H, &P);
-            /*printf("%d : ", i);
-            GFDump(ecc, P.x);
-            GFDump(ecc, P.y);
-            printf("\n");*/
         }
         EcEdDoubleProj(ecc, &H, &H); 
-        /*printf("%d_ : ", i);
-        GFDump(ecc, H.x);
-        GFDump(ecc, H.y);
-        printf("\n");*/
     }
-
     EcEdConvertProjectiveToAffine(ecc, &P, B);
 }
