@@ -19,7 +19,7 @@ static u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000
 static u64 p384[] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
 
 static inline u64 get_bit(GFElement a, u64 num) {
-    return a[num/64] & (1UL << (num % 64));
+    return a[num/64] & ((u64)1 << (num % 64));
 }
 
 static inline void copy(GFElement a, GFElement b, int len) {
