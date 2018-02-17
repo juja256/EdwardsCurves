@@ -14,7 +14,7 @@ static u64 p192[] = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF
 
 static u64 p224[] = { 1, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
 
-static u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001 };
+static u64 p256[] = {0, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001 };
 
 static u64 p384[] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
 
@@ -347,6 +347,99 @@ void GFMul_FIPS224(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 
 void GFSqr_FIPS224(EcEd* ecc, GFElement a, _out_ GFElement b) {
     GFMul_FIPS224(ecc, a, a, b);
+}
+
+/*p = 2^256 – 2^224 + 2^192 + 2^96 – 1*/
+void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) 
+{
+    GFElement tmp,res;
+    mul(ecc, a, b, res);
+    int len = ecc->wordLen + 1;
+    copy(c, res, ecc->wordLen);
+    c[ecc->wordLen] = 0;
+    
+    tmp[3] = res[7];
+    tmp[2] = res[6];
+    ((u32*)tmp)[3] = ((u32*)res)[11];
+    ((u32*)tmp)[2] = 0;
+    tmp[0] = 0;
+    if ( tmp[3] & MSB_M )
+        c[ecc->wordLen]++;
+    mul2(ecc->wordLen,tmp);
+    add(len,c,tmp,c);
+
+    ((u32*)tmp)[7] = 0;
+    ((u32*)tmp)[6] = ((u32*)res)[15];
+    ((u32*)tmp)[5] = ((u32*)res)[14];
+    ((u32*)tmp)[4] = ((u32*)res)[13];
+    ((u32*)tmp)[3] = ((u32*)res)[12];
+    if ( tmp[3] & MSB_M )
+    c[ecc->wordLen]++;
+        mul2(ecc->wordLen,tmp);
+    add(len,c,tmp,c);
+
+    tmp[3] = res[7];
+    tmp[2] = 0;
+    ((u32*)tmp)[3] = 0;
+    ((u32*)tmp)[2] = ((u32*)res)[10];
+    tmp[0] = res[4];
+    add(len,c,tmp,c);
+
+    ((u32*)tmp)[7] = ((u32*)res)[8];
+    ((u32*)tmp)[6] = ((u32*)res)[13];
+    tmp[2] = res[7];
+    ((u32*)tmp)[3] = ((u32*)res)[13];
+    ((u32*)tmp)[1] = ((u32*)res)[10];
+    ((u32*)tmp)[0] = ((u32*)res)[9];
+    add(len,c,tmp,c);
+
+    ((u32*)tmp)[7] = ((u32*)res)[10];
+    ((u32*)tmp)[6] = ((u32*)res)[8];
+    tmp[2] = 0;
+    ((u32*)tmp)[3] = 0;
+    ((u32*)tmp)[2] = ((u32*)res)[13];
+    ((u32*)tmp)[1] = ((u32*)res)[12];
+    ((u32*)tmp)[0] = ((u32*)res)[11];
+    sub(len, c, tmp, c);
+
+    ((u32*)tmp)[7] = ((u32*)res)[11];
+    ((u32*)tmp)[6] = ((u32*)res)[9];
+    tmp[2] = 0;
+    tmp[1] = res[7];
+    tmp[0] = res[6];
+    sub(len, c, tmp, c);
+
+    ((u32*)tmp)[7] = ((u32*)res)[12];
+    ((u32*)tmp)[6] = 0;
+    ((u32*)tmp)[5] = ((u32*)res)[10];
+    ((u32*)tmp)[4] = ((u32*)res)[9];
+    ((u32*)tmp)[3] = ((u32*)res)[8];
+    ((u32*)tmp)[2] = ((u32*)res)[15];
+    ((u32*)tmp)[1] = ((u32*)res)[14];
+    ((u32*)tmp)[0] = ((u32*)res)[13];
+    sub(len, c, tmp, c);
+
+    ((u32*)tmp)[7] = ((u32*)res)[13];
+    ((u32*)tmp)[6] = 0;
+    tmp[2] = res[5];
+    ((u32*)tmp)[3] = ((u32*)res)[9];
+    ((u32*)tmp)[2] = 0;
+    tmp[0] = res[7];
+    sub(len, c, tmp, c);
+
+    while( c[ecc->wordLen] & MSB_M ) // in case of c < 0
+        add(len,c,p256,c);
+
+    int borrow = sub(len,c,p256,tmp); // in case of c > p256
+    while(!borrow)
+    {
+        borrow = sub(len,tmp,p256,tmp);
+        copy(c,tmp,ecc->wordLen)
+    }
+}
+
+void GFSqr_FIPS256(EcEd* ecc, GFElement a, _out_ GFElement b) {
+    GFMul_FIPS256(ecc, a, a, b);
 }
 
 void GFMulBy2(EcEd* ecc, GFElement a, GFElement b) {
