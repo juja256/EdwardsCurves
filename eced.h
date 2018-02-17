@@ -1,6 +1,7 @@
 #ifndef ECED_H
 #define ECED_H
 
+
 #ifdef _WIN64
 #include <intrin.h>
 #pragma intrinsic(_umul128) 
