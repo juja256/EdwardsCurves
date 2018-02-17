@@ -77,7 +77,6 @@ static inline u64 sub(u64 n, u64* a, u64* b, u64* c) {
 
 static inline void _mul_raw(u64 a, u64 b, u64* low, u64* high) {
 #ifdef _WIN64
-	u64 d;
 	*low = _umul128(a, b, high);
 #else
 	__int128 r = (__int128)a * (__int128)b;
