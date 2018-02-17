@@ -1,6 +1,6 @@
 #include "eced.h"
 #include <stdio.h>
-#include <x86intrin.h>
+
 
 void test_fips192() {
     EcEd cur;
@@ -77,5 +77,9 @@ void test_fips192() {
 
 int main() {
     test_fips192();
+<<<<<<< HEAD
+	system("pause");
+=======
+>>>>>>> 06519b4b0c91fdf0bab3511ecb098d6f75601959
     return 0;
 }
