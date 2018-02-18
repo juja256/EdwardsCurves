@@ -77,6 +77,8 @@ void test_fips192() {
 
 int main() {
     test_fips192();
-	system("pause");
+    #ifdef _WIN64
+    system("pause");
+    #endif
     return 0;
 }
