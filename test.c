@@ -6,10 +6,10 @@
 
         P-192:
     p = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF
-    d = 28453E
-    n = 4000000000000000000000001AEAD1229D137F564D7FF6D5
-    x = AE709D07B2D112CECD4A7AE103757F2C101D054ACB1A0F17
-    y = 8BDF8D5A994AAB1E1455889D28E29CA3EC68548D3F7CA32F
+    d = 6DBA6A
+    n = 3FFFFFFFFFFFFFFFFFFFFFFFEA75D4027230DD4DFFDB0455
+    x = 44F083BB00E51AD91A2743284D31F57EE5C84826FCC91F4B
+    y = 15FC16E5870524E0DBBE9EC8BB9F066C02A02B1978D4E029
 
         P-224
     p = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001
@@ -38,13 +38,12 @@ void test_fips192() {
     EcPoint G, H, A, B, Z;
     BigInt n, d, p;
     GFElement e1, e2 ,e3, e4, X;
-    GFInitFromString(G.x, "AE709D07B2D112CECD4A7AE103757F2C101D054ACB1A0F17");
-    GFInitFromString(H.y, "8BDF8D5A994AAB1E1455889D28E29CA3EC68548D3F7CA32F");
-    GFInitFromString(G.y, "8BDF8D5A994AAB1E1455889D28E29CA3EC68548D3F7CA32F");
+    GFInitFromString(G.x, "44F083BB00E51AD91A2743284D31F57EE5C84826FCC91F4B");
+    GFInitFromString(G.y, "15FC16E5870524E0DBBE9EC8BB9F066C02A02B1978D4E029");
     GFInitFromString(X,   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000");
-    GFInitFromString(d,   "28453E");
+    GFInitFromString(d,   "6DBA6A");
     GFInitFromString(p,   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF");
-    GFInitFromString(n,   "4000000000000000000000001AEAD1229D137F564D7FF6D5");
+    GFInitFromString(n,   "3FFFFFFFFFFFFFFFFFFFFFFFEA75D4027230DD4DFFDB0455");
     GFInitFromString(Z.x, "00");
     GFInitFromString(Z.y, "01");
     int r = EcEdInit(&cur, &G, 192, n, d);
@@ -75,12 +74,70 @@ void test_fips192() {
     GFPow(&cur, G.x, e1, e4);
     GFDump(&cur, e4);
 
-    GFSub(&cur, cur.p, G.x, H.x);
-    GFDump(&cur, H.x);
-    GFDump(&cur, H.y);
-    EcEdAdd(&cur, &G, &H, &B);
+    u64 s, e;
+    EcEdScalarMul(&cur, &G, cur.n, &B);
+    s = __rdtsc();
+    EcEdScalarMul(&cur, &G, cur.n, &B);
+    e = __rdtsc();
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
+    printf("Scalar Mul(Hom.) time: %d\n", e-s);
+    
+    EcEdScalarMulOrdinary(&cur, &G, cur.n, &B);
+    s = __rdtsc();
+    EcEdScalarMulOrdinary(&cur, &G, cur.n, &B);
+    e = __rdtsc();
+    GFDump(&cur, B.x);
+    GFDump(&cur, B.y);
+    printf("Scalar Mul(Ord.) time: %d\n", e-s);
+
+    EcEdGenerateBasePoint(&cur, &B);
+    int isOnCurve = EcEdCheckPointOnCurve(&cur, &B);
+    printf("Generated point, on curve: %d\n", isOnCurve);
+    GFDump(&cur, B.x);
+    GFDump(&cur, B.y);
+}
+
+void test_fips224() {
+    EcEd cur;
+    EcPoint G, H, A, B, Z;
+    BigInt n, d, p;
+    GFElement e1, e2 ,e3, e4, X;
+    GFInitFromString(G.x, "C448CA02660F57204FF1BDE2B5CC3E25606A7460399FEA3DA9A06383");
+    GFInitFromString(G.y, "319117770D6FC7FE35F6A02905FE1F363156BD2E5B75BB89A64CAFAB");
+    GFInitFromString(X,   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000");
+    GFInitFromString(d,   "3608425");
+    GFInitFromString(p,   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001");
+    GFInitFromString(n,   "400000000000000000000000000020BBEC47CEDB34DD05BCB6B7E619");
+    GFInitFromString(Z.x, "00");
+    GFInitFromString(Z.y, "01");
+    int r = EcEdInit(&cur, &G, 224, n, d);
+    printf("Init status: %d %d %d\n", r, cur.bitLen, cur.wordLen);
+    
+    GFDump(&cur, G.x);
+    GFDump(&cur, G.y);
+
+    GFAdd(&cur, G.x, G.y, e1);
+    GFDump(&cur, e1);
+    GFSub(&cur, G.x, G.y, e2);
+    GFDump(&cur, e2);
+    GFSub(&cur, G.y, G.x, e3);
+    GFDump(&cur, G.x);
+    cur.GFMul(&cur, G.x, G.y, e4);
+    GFDump(&cur, e4);
+
+    EcEdAdd(&cur, &G, &Z, &B);
+
+    GFDump(&cur, B.x);
+    GFDump(&cur, B.y);
+    GFInv(&cur, G.x, e4);
+    GFDump(&cur, e4);
+    cur.GFSqr(&cur, X, e4);
+    GFDump(&cur, e4);
+
+    e1[0]=5; e1[1] = 0; e1[2] = 0; e1[3] = 0;
+    GFPow(&cur, G.x, e1, e4);
+    GFDump(&cur, e4);
 
     u64 s, e;
     EcEdScalarMul(&cur, &G, cur.n, &B);
@@ -106,8 +163,17 @@ void test_fips192() {
     GFDump(&cur, B.y);
 }
 
+void test_fips256() {
+
+}
+
 int main() {
+    printf("Testing P-192\n");
     test_fips192();
+    printf("Testing P-224\n");
+    test_fips224();
+    //test_fips256();
+
     #ifdef _WIN64
     system("pause");
     #endif
