@@ -1,6 +1,14 @@
 #ifndef ECED_H
 #define ECED_H
 
+
+#ifdef _WIN64
+#include <intrin.h>
+#pragma intrinsic(_umul128) 
+#else
+#include <x86intrin.h>
+#endif // _WIN64
+
 #define _out_
 typedef unsigned long long u64;
 typedef unsigned u32;

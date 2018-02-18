@@ -18,6 +18,7 @@ static u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000
 
 static u64 p384[] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
 
+
 static inline u64 get_bit(GFElement a, u64 num) {
     return a[num/64] & ((u64)1 << (num % 64));
 }
@@ -45,7 +46,7 @@ static inline u64 add(u64 n, u64* a, u64* b, u64* c) {
 }
 
 static inline int inc(u64 len, GFElement n) {
-    for (u32 i=0;i<len;i++) {
+    for (u64 i=0;i<len;i++) {
         if (n[i] == 0xFFFFFFFFFFFFFFFF) {
             n[i]++;
             continue;
@@ -74,16 +75,28 @@ static inline u64 sub(u64 n, u64* a, u64* b, u64* c) {
     return borrow;
 }
 
-static inline void _mul_raw(unsigned long long a, unsigned long long b, unsigned long long* low, unsigned long long* high) {
-    __int128 r = (__int128)a * (__int128)b;
-    *low = (unsigned long long)r;
-    *high = r >> 64;
+static inline void _mul_raw(u64 a, u64 b, u64* low, u64* high) {
+#ifdef _WIN64
+	*low = _umul128(a, b, high);
+#else
+	__int128 r = (__int128)a * (__int128)b;
+	*low = (unsigned long long)r;
+	*high = r >> 64;
+#endif // _WIN64
 }
 
-static inline u64 _add_raw(unsigned long long a, unsigned long long b, unsigned long long* c) {
-    __int128 r = (__int128)a + (__int128)b;
-    *c = (u64)r;
-    return r >> 64;
+static inline u64 _add_raw(u64 a, u64 b, u64* c) {
+#ifdef _WIN64
+	u64 msb_a, msb_b;
+	msb_a = a & MSB_M;
+	msb_b = b & MSB_M;
+	*c = a + b;
+	return ((msb_a && msb_b) || ((msb_a ^ msb_b) && !(MSB_M & *c)));
+#else 
+	__int128 r = (__int128)a + (__int128)b;
+	*c = (u64)r;
+	return r >> 64;
+#endif 
 }
 
 static inline void mul_by_word(EcEd* ecc, u64* a, u64 d, u64* c) {
