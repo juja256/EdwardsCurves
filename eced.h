@@ -72,4 +72,4 @@ void EcEdScalarMul(EcEd* ecc, EcPoint* A, BigInt k, _out_ EcPoint* B);
 void EcEdScalarMulOrdinary(EcEd* ecc, EcPoint* A, BigInt k, _out_ EcPoint* B);
 
 
-#endif
+#endif /* ECED_H */
