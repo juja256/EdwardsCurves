@@ -14,7 +14,7 @@ static u64 p192[] = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF
 
 static u64 p224[] = { 1, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
 
-static u64 p256[] = {0, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001 };
+static u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001, 0 };
 
 static u64 p384[] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
 
@@ -251,7 +251,13 @@ void GFAdd(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
             break;
         }
         case 256: {
-            
+            GFElement tmp;
+            a[ecc->wordLen] = b[ecc->wordLen] = 0;
+            add(ecc->wordLen+1, a,b,c);
+            carry = sub(ecc->wordLen+1,c,p256,tmp);
+            if(!carry) 
+                copy(c,tmp,ecc->wordLen);
+            break;
         }
     }
     
@@ -363,8 +369,6 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c)
     ((u32*)tmp)[3] = ((u32*)res)[11];
     ((u32*)tmp)[2] = 0;
     tmp[0] = 0;
-    if ( tmp[3] & MSB_M )
-        c[ecc->wordLen]++;
     mul2(ecc->wordLen,tmp);
     add(len,c,tmp,c);
 
@@ -373,9 +377,7 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c)
     ((u32*)tmp)[5] = ((u32*)res)[14];
     ((u32*)tmp)[4] = ((u32*)res)[13];
     ((u32*)tmp)[3] = ((u32*)res)[12];
-    if ( tmp[3] & MSB_M )
-    c[ecc->wordLen]++;
-        mul2(ecc->wordLen,tmp);
+    mul2(ecc->wordLen,tmp);
     add(len,c,tmp,c);
 
     tmp[3] = res[7];
@@ -389,6 +391,7 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c)
     ((u32*)tmp)[6] = ((u32*)res)[13];
     tmp[2] = res[7];
     ((u32*)tmp)[3] = ((u32*)res)[13];
+    ((u32*)tmp)[2] = ((u32*)res)[11];
     ((u32*)tmp)[1] = ((u32*)res)[10];
     ((u32*)tmp)[0] = ((u32*)res)[9];
     add(len,c,tmp,c);
@@ -427,14 +430,23 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c)
     tmp[0] = res[7];
     sub(len, c, tmp, c);
 
+    //printf(HEX_FORMAT,c[ecc->wordLen]);
     while( c[ecc->wordLen] & MSB_M ) // in case of c < 0
+    { 
+        /*u64 tmp = c[ecc->wordLen] & MSB_M;
+        printf(HEX_FORMAT,tmp);
+        printf("\n");
+        printf(HEX_FORMAT,c[ecc->wordLen]);
+        printf("\n");*/
         add(len,c,p256,c);
-
-    int borrow = sub(len,c,p256,tmp); // in case of c > p256
+    }
+    //printf("here");
+    u64 borrow = sub(len,c,p256,tmp); // in case of c > p256
     while(!borrow)
     {
+        //printf(HEX_FORMAT,borrow);
         borrow = sub(len,tmp,p256,tmp);
-        copy(c,tmp,ecc->wordLen)
+        copy(c,tmp,ecc->wordLen);
     }
 }
 
@@ -493,7 +505,7 @@ int GFCmp(EcEd* ecc, GFElement a, GFElement b) {
 
 int EcEdInit(EcEd* ecc, EcPoint* bp, u64 bitLen, BigInt n, GFElement d) {
     srand(time(NULL));
-    if ( (bitLen != 192) && (bitLen != 224) ) {
+    if ( (bitLen != 192) && (bitLen != 224) && (bitLen != 256) ) {
         return -1;
     }
     ecc->bitLen = bitLen;
@@ -514,6 +526,11 @@ int EcEdInit(EcEd* ecc, EcPoint* bp, u64 bitLen, BigInt n, GFElement d) {
             ecc->GFMul = GFMul_FIPS224;
             ecc->GFSqr = GFSqr_FIPS224;
             break;
+        case 256:
+            copy(ecc->p, p256, ecc->wordLen);
+            ecc->GFMul = GFMul_FIPS256;
+            ecc->GFSqr = GFSqr_FIPS256;
+            break;
     }
 
     BigInt two;
@@ -530,7 +547,7 @@ int EcEdCheckPointOnCurve(EcEd* ecc, EcPoint* P) {
     GFMul(ecc, x, y, x);
     GFMul(ecc, x, ecc->d, x);
     GFAdd(ecc, x, unity, x);
-    return !GFCmp(ecc, x, z);
+    return !GFCmp(ecc, x, z); //1 - ok
 }
 
 /* x^2 + y^2 = 1 + dx^2y^2 */
