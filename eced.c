@@ -373,6 +373,15 @@ void GFMul_FIPS224(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
     ((u32*)tmp)[4] = ((u32*)res)[11];
     ((u32*)tmp)[5] = ((u32*)res)[12];
     ((u32*)tmp)[6] = ((u32*)res)[13];
+
+    sub(4, c, tmp, c);
+    
+	if (MSB_M & c[3]) {
+        add(4, c, p224, c);
+    }
+    else if (((u32*)c)[7] == 1) {
+        sub(4, c, p224, c);
+    }
 }
 
 void GFSqr_FIPS224(EcEd* ecc, GFElement a, _out_ GFElement b) {
@@ -387,7 +396,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	mul(ecc, a, b, res);
 	copy(c, res, 2*ecc->wordLen);
 
-	u64 carry = 0;
+	u64 carry = 0, borrow = 0;
 
 	// 2*S_1
 	tmp[0] = 0;
@@ -400,7 +409,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	tmp[5] = 0;
 
 	mul2(ecc->wordLen, tmp);
-	add(6, tmp, c, c);
+	add(ecc->wordLen, tmp, c, c);
 
 	// S_2
 	((u32*)tmp)[0] = ((u32*)res)[12];
@@ -416,7 +425,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	((u32*)tmp)[10] = ((u32*)res)[22];
 	((u32*)tmp)[11] = ((u32*)res)[23];
 
-	carry = add(6, tmp, c, c);
+	carry = add(ecc->wordLen, tmp, c, c);
 	if (carry) sub(ecc->wordLen, c, ecc->p, c);
 
 	// S_3
@@ -433,7 +442,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	((u32*)tmp)[10] = ((u32*)res)[19];
 	((u32*)tmp)[11] = ((u32*)res)[20];
 
-	carry = add(6, c, tmp, c);
+	carry = add(ecc->wordLen, c, tmp, c);
 	if (carry) sub(ecc->wordLen, c, ecc->p, c);
 
 
@@ -451,7 +460,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	((u32*)tmp)[10] = ((u32*)res)[18];
 	((u32*)tmp)[11] = ((u32*)res)[19];
 
-	carry = add(6, c, tmp, c);
+	carry = add(ecc->wordLen, c, tmp, c);
 	if (carry) sub(ecc->wordLen, c, ecc->p, c);
 
 	// S_5
@@ -464,7 +473,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	tmp[4] = 0;
 	tmp[5] = 0;
 
-	add(6, c, tmp, c);
+	add(ecc->wordLen, c, tmp, c);
 
 	// S_6
 	((u32*)tmp)[0] = ((u32*)res)[20];
@@ -477,7 +486,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	tmp[4] = 0;
 	tmp[5] = 0;
 
-	add(6, c, tmp, c);
+	add(ecc->wordLen, c, tmp, c);
 
 	// D_1
 	((u32*)tmp)[0] = ((u32*)res)[23];
@@ -493,7 +502,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	((u32*)tmp)[10] = ((u32*)res)[21];
 	((u32*)tmp)[11] = ((u32*)res)[22];
 
-	sub(6, c, tmp, c);
+	sub(ecc->wordLen, c, tmp, c);
 
 	// D_2
 	((u32*)tmp)[0] = 0;
@@ -506,7 +515,7 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	tmp[4] = 0;
 	tmp[5] = 0;
 	
-	sub(6, c, tmp, c);
+	sub(ecc->wordLen, c, tmp, c);
 
 	// D_3
 	tmp[0] = 0;
@@ -518,7 +527,11 @@ void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 	tmp[4] = 0;
 	tmp[5] = 0;
 	
-	sub(6, c, tmp, c);
+	sub(ecc->wordLen, c, tmp, c);
+
+
+
+
 
 }
 

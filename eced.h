@@ -1,7 +1,6 @@
 #ifndef ECED_H
 #define ECED_H
 
-
 #ifdef _WIN64
 #include <intrin.h>
 #pragma intrinsic(_umul128) 
@@ -45,22 +44,21 @@ typedef struct _EcEd {
     u64 wordLen;
     TGFMulFunc* GFMul;
     TGFSqrFunc* GFSqr;
-
 } EcEd;
 
 void GFInitFromString(GFElement a, const char* str);
-void GFDump(EcEd* ecc, GFElement a);
-void GFAdd(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c);
-void GFSub(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c);
-void GFPow(EcEd* ecc, GFElement a, BigInt n, GFElement b);
-void GFInv(EcEd* ecc, GFElement a, GFElement b);
-int  GFCmp(EcEd* ecc, GFElement a, GFElement b);
-void GFMul(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c);
-void GFSqr(EcEd* ecc, GFElement a, _out_ GFElement c);
+void GFDump(EcEd* ecc, const GFElement a);
+void GFAdd(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c);
+void GFSub(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c);
+void GFPow(EcEd* ecc, const GFElement a, const BigInt n, GFElement b);
+void GFInv(EcEd* ecc, const GFElement a, GFElement b);
+int  GFCmp(EcEd* ecc, const GFElement a, const GFElement b);
+void GFMul(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c);
+void GFSqr(EcEd* ecc, const GFElement a, _out_ GFElement c);
 
 int  EcEdInit(EcEd* ecc, EcPoint* bp, u64 bitLen, BigInt n, GFElement d);
 void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp);
-int  EcEdCheckPointOnCurve(EcEd* ecc,EcPoint*);
+int  EcEdCheckPointOnCurve(EcEd* ecc, EcPoint*);
 
 void EcEdAdd(EcEd* ecc, EcPoint* A, EcPoint* B, _out_ EcPoint* C);
 void EcEdDouble(EcEd* ecc, EcPoint* A, _out_ EcPoint* B);
