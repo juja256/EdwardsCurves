@@ -52,12 +52,12 @@ void test_fips192() {
     GFDump(&cur, G.x);
     GFDump(&cur, G.y);
 
-    GFAdd(&cur, G.x, G.y, e1);
+    GFAdd(&cur, p, p, e1);
     GFDump(&cur, e1);
-    GFSub(&cur, G.x, G.y, e2);
+    GFSub(&cur, p, p, e2);
     GFDump(&cur, e2);
     GFSub(&cur, G.y, G.x, e3);
-    GFDump(&cur, G.x);
+    GFDump(&cur, e3);
     cur.GFMul(&cur, G.x, G.y, e4);
     GFDump(&cur, e4);
 
@@ -103,12 +103,14 @@ void test_fips224() {
     EcPoint G, H, A, B, Z;
     BigInt n, d, p;
     GFElement e1, e2 ,e3, e4, X;
-    GFInitFromString(G.x, "74E8DA9676A0AA64C73460EFBA56F04A5D69FB39DC03A0D53B9E99A9");
-    GFInitFromString(G.y, "A70D758DE2B7CADCEED9D6315F44987AF89B9D1D3BB62B54574971D5");
+	
+	
+	GFInitFromString(G.x, "C448CA02660F57204FF1BDE2B5CC3E25606A7460399FEA3DA9A06383");
+    GFInitFromString(G.y, "319117770D6FC7FE35F6A02905FE1F363156BD2E5B75BB89A64CAFAB");
     GFInitFromString(X,   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000");
-    GFInitFromString(d,   "42E5CF5");
+    GFInitFromString(d,   "3608425");
     GFInitFromString(p,   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001");
-    GFInitFromString(n,   "400000000000000000000000000070D1AD037FD1F2585B37C3CD8E75");
+    GFInitFromString(n,   "400000000000000000000000000020BBEC47CEDB34DD05BCB6B7E619");
     GFInitFromString(Z.x, "00");
     GFInitFromString(Z.y, "01");
     int r = EcEdInit(&cur, &G, 224, n, d);
@@ -268,19 +270,57 @@ void test()
 
 }
 
+void test2()
+{
+	EcEd cur;
+	EcPoint G, H, A, B, Z;
+	BigInt n, d, p;
+	GFElement e1, e2, e3, e4, X;
+
+	GFInitFromString(G.x, "C448CA02660F57204FF1BDE2B5CC3E25606A7460399FEA3DA9A06383");
+	GFInitFromString(G.y, "419117770D6FC7FE35F6A02905FE1F363156BD2E5B75BB89A64CAFAB");
+	GFInitFromString(X, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000");
+	GFInitFromString(d, "3608425");
+	GFInitFromString(p, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001");
+	GFInitFromString(n, "400000000000000000000000000020BBEC47CEDB34DD05BCB6B7E619");
+	GFInitFromString(Z.x, "00");
+	GFInitFromString(Z.y, "01");
+	int r = EcEdInit(&cur, &G, 224, n, d);
+
+	printf("a+b: ");
+	GFAdd(&cur, p, Z.y, e1);
+	GFDump(&cur, e1);
+	printf("\n");
+
+	printf("a-b: ");
+	GFSub(&cur, p, p, e2);
+	GFDump(&cur, e2);
+	printf("\n");
+
+
+	printf("a*b: ");
+	GFMul(&cur, G.x, G.y, e3);
+	GFDump(&cur, e3);
+	printf("\n");
+
+	int isOnCurve = EcEdCheckPointOnCurve(&cur, &G);
+	printf("Generated point, on curve: %d\n", isOnCurve);
+
+}
+
 int main() {
-   // printf("Testing P-192\n");
-  //  test_fips192();
+ //    printf("Testing P-192\n");
+    test_fips192();
 
 
   //   printf("Testing P-224\n");
  //    test_fips224();
 
-	 printf("Testing P-384\n");
-	 test();
+	// printf("Testing P-384\n");
+	// test2();
 
-//	 printf("Testing P-384\n");
-//	 test_fips384();
+	// printf("Testing P-384\n");
+	// test_fips384();
 
     #ifdef _WIN64
     system("pause");
