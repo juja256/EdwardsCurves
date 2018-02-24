@@ -54,7 +54,7 @@ void test_fips192() {
 
     GFAdd(&cur, G.x, G.y, e1);
     GFDump(&cur, e1);
-    GFSub(&cur, G.x, G.y, e2);
+    GFSub(&cur, p, p, e2);
     GFDump(&cur, e2);
     GFSub(&cur, G.y, G.x, e3);
     GFDump(&cur, G.x);
