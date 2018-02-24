@@ -12,19 +12,19 @@ static EcPoint uP = { {0,0,0,0,0,0}, {1,0,0,0,0,0} };
 
 static u64 p192[] = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
 
-static u64 p224[] = { 1, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
+static u64 p224[] = { 0x0000000000000001, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
 
 static u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001 };
 
-static u64 p384[] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
-
+static u64 p384[] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
+                                          
 
 static inline u64 get_bit(GFElement a, u64 num) {
     return a[num/64] & ((u64)1 << (num % 64));
 }
 
 static inline void copy(GFElement a, GFElement b, int len) {
-    for (u64 i=0;i<len;i++)
+    for (int i=0;i<len;i++)
         a[i] = b[i];
 }
 
@@ -36,7 +36,7 @@ static inline void copy_point(EcPoint* P, EcPoint* Q, int len) {
 static inline u64 add(u64 n, u64* a, u64* b, u64* c) {
     u64 msb_a, msb_b, carry = 0;
 
-    for (u64 i=0;i < n; i++) {
+    for (int i=0;i < n; i++) {
         msb_a = a[i] & MSB_M;
         msb_b = b[i] & MSB_M;
         c[i] = a[i] + b[i] + carry;
@@ -46,7 +46,7 @@ static inline u64 add(u64 n, u64* a, u64* b, u64* c) {
 }
 
 static inline int inc(u64 len, GFElement n) {
-    for (u64 i=0;i<len;i++) {
+    for (int i=0;i<len;i++) {
         if (n[i] == 0xFFFFFFFFFFFFFFFF) {
             n[i]++;
             continue;
@@ -62,7 +62,7 @@ static inline int inc(u64 len, GFElement n) {
 static inline u64 sub(u64 n, u64* a, u64* b, u64* c) {
     u64 borrow = 0;
 
-    for (u32 i=0; i<n; i++) {
+    for (int i=0; i<n; i++) {
         if ((a[i] >= (b[i] + borrow)) && !(b[i] == 0xFFFFFFFFFFFFFFFF)) {
             c[i] = a[i] - b[i] - borrow;
             borrow = 0;
@@ -101,7 +101,7 @@ static inline u64 _add_raw(u64 a, u64 b, u64* c) {
 
 static inline void mul_by_word(EcEd* ecc, u64* a, u64 d, u64* c) {
     u64 carry = 0, carry_tmp;
-    for (u64 i=0; i < ecc->wordLen; i++) {
+    for (int i=0; i < ecc->wordLen; i++) {
         carry_tmp = carry;
         _mul_raw(d, a[i], &(c[i]), &carry);
         carry += _add_raw(c[i], carry_tmp, &(c[i]));
@@ -131,7 +131,7 @@ static inline u64 word_bit_len(u64 n) {
 
 static inline void mul2(u64 n, GFElement a) {
     u64 buf = 0;
-    for (u32 i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         u64 cur = a[i];
         a[i] <<= 1;
         a[i] ^= buf;
@@ -256,23 +256,34 @@ void GFAdd(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
             break;
         }
         case 224: {
-            add(ecc->wordLen, a,b,c);
-            carry = (c[ ecc->wordLen -1 ] & (1UL<<32) );
-            if (carry) {
-                sub(ecc->wordLen, c, ecc->p, c);
-            }
-            break;
+			add(ecc->wordLen, a,b,c);
+			carry = (c[ecc->wordLen - 1] & ((u64)1 << 32));
+			if (carry) {
+				sub(ecc->wordLen, c, ecc->p, c);
+			}
+			break;
         }
         case 256: {
             
         }
+		case 384: {
+			carry = add(ecc->wordLen, a, b, c);
+			if (carry) {
+				sub(ecc->wordLen, c, ecc->p, c);
+			}
+			if ((c[5] == 0xFFFFFFFFFFFFFFFF) && (c[4] == 0xFFFFFFFFFFFFFFFF) 
+			 && (c[3] == 0xFFFFFFFFFFFFFFFF) && (c[2] == 0xFFFFFFFFFFFFFFFF)) {
+				sub(ecc->wordLen, c, ecc->p, c);
+			}
+			break;
+		}
     }
     
 }
 
 void GFSub(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
     GFElement tmp;
-    copy(tmp, a, ecc->wordLen);
+    copy(tmp, a, ecc->wordLen);                           
     sub(ecc->wordLen, ecc->p, (u64*)b, (u64*)c);
     GFAdd(ecc, tmp, c, c);
 }
@@ -282,18 +293,27 @@ void GFMul_FIPS192(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
     mul(ecc, a, b, tmp);
     copy(c, tmp, 2*ecc->wordLen);
     u64 carry = 0;
+
+	// S_1
     tmp[0] = c[3];
     tmp[1] = c[3];
     tmp[2] = 0;
-    carry += add(3, c, tmp, c);
-    tmp[0] = 0;
+    
+	carry += add(3, c, tmp, c);
+    
+	// S_2
+	tmp[0] = 0;
     tmp[1] = c[4];
     tmp[2] = c[4];
+
     carry = add(3, c, tmp, c);
     if (carry) sub(ecc->wordLen, c, ecc->p, c);
-    tmp[0] = c[5];
+    
+	// S_3
+	tmp[0] = c[5];
     tmp[1] = c[5];
     tmp[2] = c[5];
+
     carry = add(3, c, tmp, c);
     if (carry) sub(ecc->wordLen, c, ecc->p, c);
     if ((c[2] == 0xFFFFFFFFFFFFFFFF) && (c[1] == 0xFFFFFFFFFFFFFFFF)) {
@@ -313,9 +333,10 @@ void GFMul_FIPS224(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
     mul(ecc, a, b, res);
     copy(c, res, ecc->wordLen);
 
-    u64 carry = 0, borrow = 0;
+    u64 carry = 0;
     c[3] = c[3] & 0xFFFFFFFF;
 
+	// S_1
     tmp[0] = 0;
     ((u32*)tmp)[2] = 0;
     ((u32*)tmp)[3] = ((u32*)res)[7];
@@ -325,7 +346,8 @@ void GFMul_FIPS224(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
     ((u32*)tmp)[7] = 0;
 
     add(4, tmp, c, c);
-
+	
+	// S_2
     ((u32*)tmp)[3] = ((u32*)res)[11];
     ((u32*)tmp)[4] = ((u32*)res)[12];
     ((u32*)tmp)[5] = ((u32*)res)[13];
@@ -333,14 +355,17 @@ void GFMul_FIPS224(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
 
     add(4, tmp, c, c);
 
+	// D_1
     ((u32*)tmp)[0] = ((u32*)res)[11];
     ((u32*)tmp)[1] = ((u32*)res)[12];
     ((u32*)tmp)[2] = ((u32*)res)[13];
     ((u32*)tmp)[3] = 0;
     tmp[2] = 0;
     tmp[3] = 0;
-    sub(4, c, tmp, c);
+    
+	sub(4, c, tmp, c);
 
+	// D_2
     ((u32*)tmp)[0] = ((u32*)res)[7];
     ((u32*)tmp)[1] = ((u32*)res)[8];
     ((u32*)tmp)[2] = ((u32*)res)[9];
@@ -348,18 +373,157 @@ void GFMul_FIPS224(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
     ((u32*)tmp)[4] = ((u32*)res)[11];
     ((u32*)tmp)[5] = ((u32*)res)[12];
     ((u32*)tmp)[6] = ((u32*)res)[13];
-
-    sub(4, c, tmp, c);
-    if (MSB_M & c[3]) {
-        add(4, c, p224, c);
-    }
-    else if (((u32*)c)[7] == 1) {
-        sub(4, c, p224, c);
-    }
 }
 
 void GFSqr_FIPS224(EcEd* ecc, GFElement a, _out_ GFElement b) {
     GFMul_FIPS224(ecc, a, a, b);
+}
+
+
+/* FIPS-384 Fp: p = p^384 - 2^128 - 2^96 +  2^32 - 1 */
+
+void GFMul_FIPS384(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) {
+	GFElement res, tmp;
+	mul(ecc, a, b, res);
+	copy(c, res, 2*ecc->wordLen);
+
+	u64 carry = 0;
+
+	// 2*S_1
+	tmp[0] = 0;
+	tmp[1] = 0;
+	((u32*)tmp)[4] = ((u32*)res)[21];
+	((u32*)tmp)[5] = ((u32*)res)[22];
+	((u32*)tmp)[6] = ((u32*)res)[23];
+	((u32*)tmp)[7] = 0;
+	tmp[4] = 0;
+	tmp[5] = 0;
+
+	mul2(ecc->wordLen, tmp);
+	add(6, tmp, c, c);
+
+	// S_2
+	((u32*)tmp)[0] = ((u32*)res)[12];
+	((u32*)tmp)[1] = ((u32*)res)[13];
+	((u32*)tmp)[2] = ((u32*)res)[14];
+	((u32*)tmp)[3] = ((u32*)res)[15];
+	((u32*)tmp)[4] = ((u32*)res)[16];
+	((u32*)tmp)[5] = ((u32*)res)[17];
+	((u32*)tmp)[6] = ((u32*)res)[18];
+	((u32*)tmp)[7] = ((u32*)res)[19];
+	((u32*)tmp)[8] = ((u32*)res)[20];
+	((u32*)tmp)[9] = ((u32*)res)[21];
+	((u32*)tmp)[10] = ((u32*)res)[22];
+	((u32*)tmp)[11] = ((u32*)res)[23];
+
+	carry = add(6, tmp, c, c);
+	if (carry) sub(ecc->wordLen, c, ecc->p, c);
+
+	// S_3
+	((u32*)tmp)[0] = ((u32*)res)[21];
+	((u32*)tmp)[1] = ((u32*)res)[22];
+	((u32*)tmp)[2] = ((u32*)res)[23];
+	((u32*)tmp)[3] = ((u32*)res)[12];
+	((u32*)tmp)[4] = ((u32*)res)[13];
+	((u32*)tmp)[5] = ((u32*)res)[14];
+	((u32*)tmp)[6] = ((u32*)res)[15];
+	((u32*)tmp)[7] = ((u32*)res)[16];
+	((u32*)tmp)[8] = ((u32*)res)[17];
+	((u32*)tmp)[9] = ((u32*)res)[18];
+	((u32*)tmp)[10] = ((u32*)res)[19];
+	((u32*)tmp)[11] = ((u32*)res)[20];
+
+	carry = add(6, c, tmp, c);
+	if (carry) sub(ecc->wordLen, c, ecc->p, c);
+
+
+	// S_4
+	((u32*)tmp)[0] = 0;
+	((u32*)tmp)[1] = ((u32*)res)[23];
+	((u32*)tmp)[2] = 0;
+	((u32*)tmp)[3] = ((u32*)res)[20];
+	((u32*)tmp)[4] = ((u32*)res)[12];
+	((u32*)tmp)[5] = ((u32*)res)[13];
+	((u32*)tmp)[6] = ((u32*)res)[14];
+	((u32*)tmp)[7] = ((u32*)res)[15];
+	((u32*)tmp)[8] = ((u32*)res)[16];
+	((u32*)tmp)[9] = ((u32*)res)[17];
+	((u32*)tmp)[10] = ((u32*)res)[18];
+	((u32*)tmp)[11] = ((u32*)res)[19];
+
+	carry = add(6, c, tmp, c);
+	if (carry) sub(ecc->wordLen, c, ecc->p, c);
+
+	// S_5
+	tmp[0] = 0;
+	tmp[1] = 0;
+	((u32*)tmp)[4] = ((u32*)res)[20];
+	((u32*)tmp)[5] = ((u32*)res)[21];
+	((u32*)tmp)[6] = ((u32*)res)[22];
+	((u32*)tmp)[7] = ((u32*)res)[23];
+	tmp[4] = 0;
+	tmp[5] = 0;
+
+	add(6, c, tmp, c);
+
+	// S_6
+	((u32*)tmp)[0] = ((u32*)res)[20];
+	((u32*)tmp)[1] = 0;
+	((u32*)tmp)[2] = 0;
+	((u32*)tmp)[3] = ((u32*)res)[21];
+	((u32*)tmp)[4] = ((u32*)res)[22];
+	((u32*)tmp)[5] = ((u32*)res)[23];	
+	tmp[3] = 0;
+	tmp[4] = 0;
+	tmp[5] = 0;
+
+	add(6, c, tmp, c);
+
+	// D_1
+	((u32*)tmp)[0] = ((u32*)res)[23];
+	((u32*)tmp)[1] = ((u32*)res)[12];
+	((u32*)tmp)[2] = ((u32*)res)[13];
+	((u32*)tmp)[3] = ((u32*)res)[14];
+	((u32*)tmp)[4] = ((u32*)res)[15];
+	((u32*)tmp)[5] = ((u32*)res)[16];
+	((u32*)tmp)[6] = ((u32*)res)[17];
+	((u32*)tmp)[7] = ((u32*)res)[18];
+	((u32*)tmp)[8] = ((u32*)res)[19];
+	((u32*)tmp)[9] = ((u32*)res)[20];
+	((u32*)tmp)[10] = ((u32*)res)[21];
+	((u32*)tmp)[11] = ((u32*)res)[22];
+
+	sub(6, c, tmp, c);
+
+	// D_2
+	((u32*)tmp)[0] = 0;
+	((u32*)tmp)[1] = ((u32*)res)[20];
+	((u32*)tmp)[2] = ((u32*)res)[21];
+	((u32*)tmp)[3] = ((u32*)res)[22];
+	((u32*)tmp)[4] = ((u32*)res)[23];
+	((u32*)tmp)[5] = 0;
+	tmp[3] = 0;
+	tmp[4] = 0;
+	tmp[5] = 0;
+	
+	sub(6, c, tmp, c);
+
+	// D_3
+	tmp[0] = 0;
+	((u32*)tmp)[2] = 0;
+	((u32*)tmp)[3] = ((u32*)res)[23];
+	((u32*)tmp)[4] = ((u32*)res)[23];
+	((u32*)tmp)[5] = 0;
+	tmp[3] = 0;
+	tmp[4] = 0;
+	tmp[5] = 0;
+	
+	sub(6, c, tmp, c);
+
+}
+
+void GFSqr_FIPS384(EcEd* ecc, GFElement a, _out_ GFElement b) {
+	GFMul_FIPS384(ecc, a, a, b);
 }
 
 void GFMulBy2(EcEd* ecc, GFElement a, GFElement b) {
@@ -413,7 +577,7 @@ int GFCmp(EcEd* ecc, GFElement a, GFElement b) {
 
 int EcEdInit(EcEd* ecc, EcPoint* bp, u64 bitLen, BigInt n, GFElement d) {
     srand(time(NULL));
-    if ( (bitLen != 192) && (bitLen != 224) ) {
+    if ( (bitLen != 192) && (bitLen != 224) && (bitLen != 384)) {
         return -1;
     }
     ecc->bitLen = bitLen;
@@ -434,6 +598,11 @@ int EcEdInit(EcEd* ecc, EcPoint* bp, u64 bitLen, BigInt n, GFElement d) {
             ecc->GFMul = GFMul_FIPS224;
             ecc->GFSqr = GFSqr_FIPS224;
             break;
+		case 384: 
+			copy(ecc->p, p384, ecc->wordLen);
+			ecc->GFMul = GFMul_FIPS384;
+			ecc->GFSqr = GFSqr_FIPS384;
+			break;
     }
 
     BigInt two;
