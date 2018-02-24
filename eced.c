@@ -62,8 +62,8 @@ static inline int inc(u64 len, GFElement n) {
 static inline u64 sub(u64 n, u64* a, u64* b, u64* c) {
     u64 borrow = 0;
 
-    for (int i=0; i<n; i++) {
-        if ((a[i] >= (b[i] + borrow)) && !(b[i] == 0xFFFFFFFFFFFFFFFF)) {
+    for (u32 i=0; i<n; i++) {
+        if ((a[i] >= (b[i] + borrow)) && ( (b[i] != 0xFFFFFFFFFFFFFFFF) || (a[i] == 0xFFFFFFFFFFFFFFFF) ) ) {
             c[i] = a[i] - b[i] - borrow;
             borrow = 0;
         }
