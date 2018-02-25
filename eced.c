@@ -45,32 +45,13 @@ static inline u64 add(u64 n, u64* a, u64* b, u64* c) {
     return carry;
 }
 
-static inline int inc(u64 len, GFElement n) {
-    for (u64 i=0;i<len;i++) {
-        if (n[i] == 0xFFFFFFFFFFFFFFFF) {
-            n[i]++;
-            continue;
-        }
-        else {
-            n[i]++;
-            return 0;
-        } 
-    }
-    return 1;
-}
-
 static inline u64 sub(u64 n, u64* a, u64* b, u64* c) {
     u64 borrow = 0;
-
-    for (u32 i=0; i<n; i++) {
-        if ((a[i] >= (b[i] + borrow)) && ( (b[i] != 0xFFFFFFFFFFFFFFFF) || (a[i] == 0xFFFFFFFFFFFFFFFF) ) ) {
-            c[i] = a[i] - b[i] - borrow;
-            borrow = 0;
-        }
-        else {
-            c[i] = (0xFFFFFFFFFFFFFFFF + (a[i] - b[i] - borrow)) + 1;
-            borrow = 1;
-        }
+    for (int i=0; i<n; i++) {
+        u64 t_a = a[i];
+        u64 t_b = b[i];
+        c[i] = t_a - t_b - borrow;
+        borrow = ( (~t_a) & (c[i] | t_b) | (c[i] & t_b) ) >> (63);
     }
     return borrow;
 }

@@ -52,6 +52,9 @@ void test_fips192() {
     GFDump(&cur, G.x);
     GFDump(&cur, G.y);
 
+    int isOnCurve = EcEdCheckPointOnCurve(&cur, &G);
+    printf("Base point, on curve: %d\n", isOnCurve);
+
     GFAdd(&cur, G.x, G.y, e1);
     GFDump(&cur, e1);
     GFSub(&cur, p, p, e2);
@@ -92,7 +95,7 @@ void test_fips192() {
     printf("Scalar Mul(Ord.) time: %d\n", e-s);
 
     EcEdGenerateBasePoint(&cur, &B);
-    int isOnCurve = EcEdCheckPointOnCurve(&cur, &B);
+    isOnCurve = EcEdCheckPointOnCurve(&cur, &B);
     printf("Generated point, on curve: %d\n", isOnCurve);
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
@@ -172,6 +175,7 @@ int main() {
     test_fips192();
     printf("Testing P-224\n");
     test_fips224();
+
     //test_fips256();
 
     #ifdef _WIN64
