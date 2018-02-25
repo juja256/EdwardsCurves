@@ -288,12 +288,12 @@ void test2()
 	int r = EcEdInit(&cur, &G, 224, n, d);
 
 	printf("a+b: ");
-	GFAdd(&cur, p, Z.y, e1);
+	GFAdd(&cur, G.x, G.y, e1);
 	GFDump(&cur, e1);
 	printf("\n");
 
 	printf("a-b: ");
-	GFSub(&cur, p, p, e2);
+	GFSub(&cur, G.x, G.y, e2);
 	GFDump(&cur, e2);
 	printf("\n");
 
@@ -309,15 +309,15 @@ void test2()
 }
 
 int main() {
- //    printf("Testing P-192\n");
+     printf("Testing P-192\n");
     test_fips192();
 
 
-  //   printf("Testing P-224\n");
- //    test_fips224();
+     printf("Testing P-224\n");
+   // test_fips224();
 
-	// printf("Testing P-384\n");
-	// test2();
+	// printf("Testing P-284\n");
+    // test2();
 
 	// printf("Testing P-384\n");
 	// test_fips384();

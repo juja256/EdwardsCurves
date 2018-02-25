@@ -4,19 +4,21 @@
 #include <stdio.h>
 #include <time.h>
 
-#define MSB_M 0x8000000000000000
+#define MAX_U64    0xFFFFFFFFFFFFFFFF
+#define MSB_M      0x8000000000000000
 #define HEX_FORMAT "%.16llX"
-static u64 unity[] = {0x1, 0,0,0,0,0};
 
-static EcPoint uP = { {0,0,0,0,0,0}, {1,0,0,0,0,0} };
+static u64 unity[] = { 0x1, 0, 0, 0, 0, 0 };
 
-static u64 p192[] = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
+static EcPoint uP  = { { 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0} };
 
-static u64 p224[] = { 0x0000000000000001, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
+static u64 p192[]  = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
 
-static u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001 };
+static u64 p224[]  = { 0x0000000000000001, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
 
-static u64 p384[] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
+static u64 p256[]  = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001 };
+
+static u64 p384[]  = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
                                           
 
 static inline u64 get_bit(GFElement a, u64 num) {
@@ -36,7 +38,7 @@ static inline void copy_point(EcPoint* P, EcPoint* Q, int len) {
 static inline u64 add(u64 n, u64* a, u64* b, u64* c) {
     u64 msb_a, msb_b, carry = 0;
 
-    for (int i=0;i < n; i++) {
+    for (u32 i=0;i < n; i++) {
         msb_a = a[i] & MSB_M;
         msb_b = b[i] & MSB_M;
         c[i] = a[i] + b[i] + carry;
@@ -46,8 +48,8 @@ static inline u64 add(u64 n, u64* a, u64* b, u64* c) {
 }
 
 static inline int inc(u64 len, GFElement n) {
-    for (int i=0;i<len;i++) {
-        if (n[i] == 0xFFFFFFFFFFFFFFFF) {
+    for (u32 i=0;i<len;i++) {
+        if (n[i] == MAX_U64) {
             n[i]++;
             continue;
         }
@@ -63,12 +65,12 @@ static inline u64 sub(u64 n, u64* a, u64* b, u64* c) {
     u64 borrow = 0;
 
     for (u32 i=0; i<n; i++) {
-        if ((a[i] >= (b[i] + borrow)) && ( (b[i] != 0xFFFFFFFFFFFFFFFF) || (a[i] == 0xFFFFFFFFFFFFFFFF) ) ) {
+        if ((a[i] >= (b[i] + borrow)) && ( (b[i] != MAX_U64) || (a[i] == MAX_U64) ) ) {
             c[i] = a[i] - b[i] - borrow;
             borrow = 0;
         }
         else {
-            c[i] = (0xFFFFFFFFFFFFFFFF + (a[i] - b[i] - borrow)) + 1;
+            c[i] = (MAX_U64 + (a[i] - b[i] - borrow)) + 1;
             borrow = 1;
         }
     }
@@ -135,7 +137,7 @@ static inline void mul2(u64 n, GFElement a) {
         u64 cur = a[i];
         a[i] <<= 1;
         a[i] ^= buf;
-        buf = (cur & (0xFFFFFFFFFFFFFFFF << ( 63 ))) >> ( 63 );
+        buf = (cur & (MAX_U64 << ( 63 ))) >> ( 63 );
     }
     a[n] = buf;
 }
@@ -228,18 +230,18 @@ void GFInitFromString(GFElement a, const char* str) {
     }
 }
 
-void GFDump(EcEd* ecc, const GFElement a) {
+void GFDump(const EcEd* ecc, const GFElement a) {
     for (int i=ecc->wordLen-1; i>=0; i--)
         printf(HEX_FORMAT, a[i]);
     printf("\n");
 }
 
 
-void GFNeg(EcEd* ecc, const GFElement a, _out_ GFElement c) {
+void GFNeg(const EcEd* ecc, const GFElement a, GFElement c) {
     sub(ecc->wordLen, ecc->p, (u64*)a, (u64*)c);
 }
 
-void GFAdd(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
+void GFAdd(const EcEd* ecc, const GFElement a, const GFElement b, const GFElement c) {
     u64 carry = 0;
     switch (ecc->bitLen) {
         case 192: {
@@ -247,7 +249,7 @@ void GFAdd(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
             if (carry) {
                 sub(ecc->wordLen, c, ecc->p, c);
             }
-            if ((c[2] == 0xFFFFFFFFFFFFFFFF) && (c[1] == 0xFFFFFFFFFFFFFFFF)) {
+            if ((c[2] == MAX_U64) && (c[1] == MAX_U64)) {
                 sub(ecc->wordLen, c, ecc->p, c);
             }
             break;
@@ -258,10 +260,6 @@ void GFAdd(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
 			if (carry) {
 				sub(ecc->wordLen, c, ecc->p, c);
 			}
-		//	if ((c[3] >= 0x00000000FFFFFFFF) && (c[2] == 0xFFFFFFFFFFFFFFFF)
-		//	 && (c[1] >= 0xFFFFFFFF00000000) && (c[0] == 0x0000000000000001)) {
-				sub(ecc->wordLen, c, ecc->p, c);
-		//	}
 			break;
 		}
 		case 256: {
@@ -272,17 +270,14 @@ void GFAdd(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
 			if (carry) {
 				sub(ecc->wordLen, c, ecc->p, c);
 			}
-			if ((c[5] == 0xFFFFFFFFFFFFFFFF) && (c[4] == 0xFFFFFFFFFFFFFFFF)
-		     && (c[3] == 0xFFFFFFFFFFFFFFFF) && (c[2] == 0xFFFFFFFFFFFFFFFF)) {
-				sub(ecc->wordLen, c, ecc->p, c);
-			}
+
+
 			break;
 		}
     }
-    
 }
 
-void GFSub(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
+void GFSub(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
     GFElement tmp;
     copy(tmp, a, ecc->wordLen);                           
     sub(ecc->wordLen, ecc->p, (u64*)b, (u64*)c);
@@ -291,7 +286,7 @@ void GFSub(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
 
 /* FIPS-192 Fp: p = 2^192 - 2^64 - 1*/
 
-void GFMul_FIPS192(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
+void GFMul_FIPS192(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
     GFElement tmp;
     mul(ecc, a, b, tmp);
     copy(c, tmp, 2*ecc->wordLen);
@@ -319,19 +314,19 @@ void GFMul_FIPS192(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElem
 
     carry = add(3, c, tmp, c);
     if (carry) sub(ecc->wordLen, c, ecc->p, c);
-    if ((c[2] == 0xFFFFFFFFFFFFFFFF) && (c[1] == 0xFFFFFFFFFFFFFFFF)) {
+    if ((c[2] == MAX_U64) && (c[1] == MAX_U64)) {
         sub(ecc->wordLen, c, ecc->p, c);
     }
     c[3] = 0;
 }
 
-void GFSqr_FIPS192(EcEd* ecc, const GFElement a, _out_ GFElement b) {
+void GFSqr_FIPS192(const EcEd* ecc, const GFElement a, GFElement b) {
     GFMul_FIPS192(ecc, a, a, b);
 }
 
 /* FIPS-224 Fp: p = 2^224 - 2^96 - 1 */
 
-void GFMul_FIPS224(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
+void GFMul_FIPS224(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
     GFElement res, tmp;
     mul(ecc, a, b, res);
     copy(c, res, ecc->wordLen);
@@ -388,23 +383,23 @@ void GFMul_FIPS224(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElem
 
 }
 
-void GFSqr_FIPS224(EcEd* ecc, const GFElement a, _out_ GFElement b) {
+void GFSqr_FIPS224(const EcEd* ecc, const GFElement a, GFElement b) {
     GFMul_FIPS224(ecc, a, a, b);
 }
 
 /* FIPS-256 Fp: p = 2^256 – 2^224 + 2^192 + 2^96 – 1 */
 
-void GFMul_FIPS256(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
+void GFMul_FIPS256(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
 
 }
 
-void GFSqr_FIPS256(EcEd* ecc, const GFElement a, _out_ GFElement b) {
+void GFSqr_FIPS256(const EcEd* ecc, const GFElement a, GFElement b) {
 	GFMul_FIPS256(ecc, a, a, b);
 }
 
 /* FIPS-384 Fp: p = p^384 - 2^128 - 2^96 +  2^32 - 1 */
 
-void GFMul_FIPS384(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
+void GFMul_FIPS384(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
 	GFElement res, tmp;
 	mul(ecc, a, b, res);
 	copy(c, res, 2*ecc->wordLen);
@@ -544,11 +539,11 @@ void GFMul_FIPS384(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElem
 
 }
 
-void GFSqr_FIPS384(EcEd* ecc, const GFElement a, _out_ GFElement b) {
+void GFSqr_FIPS384(const EcEd* ecc, const GFElement a, GFElement b) {
 	GFMul_FIPS384(ecc, a, a, b);
 }
 
-void GFMulBy2(EcEd* ecc, const GFElement a, GFElement b) {
+void GFMulBy2(const EcEd* ecc, const GFElement a, GFElement b) {
     u64 carry = 0;
     copy(b, a, ecc->wordLen);
     b[ecc->wordLen] = 0;
@@ -564,7 +559,7 @@ void GFMulBy2(EcEd* ecc, const GFElement a, GFElement b) {
     }
 }
 
-void GFPow(EcEd* ecc, const GFElement a, const BigInt n, GFElement b) {
+void GFPow(const EcEd* ecc, const GFElement a, const BigInt n, GFElement b) {
     GFElement tmp, tmp2;
     copy(tmp, a, ecc->wordLen);
     memset(tmp2, 0, 8*ecc->wordLen);
@@ -578,19 +573,19 @@ void GFPow(EcEd* ecc, const GFElement a, const BigInt n, GFElement b) {
     copy(b, tmp2, ecc->wordLen);
 }
 
-void GFInv(EcEd* ecc, const GFElement a, GFElement b) {
+void GFInv(const EcEd* ecc, const GFElement a, GFElement b) {
     GFPow(ecc, a, ecc->p_min_two, b);
 }
 
-void GFMul(EcEd* ecc, const GFElement a, const GFElement b, _out_ GFElement c) {
+void GFMul(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
     ecc->GFMul(ecc, a, b, c);
 }
 
-void GFSqr(EcEd* ecc, GFElement a, _out_ GFElement c) {
+void GFSqr(const EcEd* ecc, const GFElement a, GFElement c) {
     ecc->GFSqr(ecc, a, c);
 }
 
-int GFCmp(EcEd* ecc, const GFElement a, const GFElement b) {
+int GFCmp(const EcEd* ecc, const GFElement a, const GFElement b) {
     for (int i=ecc->wordLen - 1; i>=0; i--) {
         if (a[i] != b[i]) return 1;
     }
@@ -636,7 +631,7 @@ int EcEdInit(EcEd* ecc, EcPoint* bp, u64 bitLen, BigInt n, GFElement d) {
     return 0;
 }
 
-int EcEdCheckPointOnCurve(EcEd* ecc, EcPoint* P) {
+int EcEdCheckPointOnCurve(const EcEd* ecc, const EcPoint* P) {
     GFElement x,y,z;
     GFSqr(ecc, P->x, x);
     GFSqr(ecc, P->y, y);
@@ -649,7 +644,7 @@ int EcEdCheckPointOnCurve(EcEd* ecc, EcPoint* P) {
 
 /* x^2 + y^2 = 1 + dx^2y^2 */
 /* y^2 = (1 - x^2)/(1 - dx^2) */
-void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp) {
+void EcEdGenerateBasePoint(const EcEd* ecc, EcPoint* bp) {
     randomize(ecc->wordLen, bp->x);
     int y = 0;
     GFElement t1, t2, t3, pp;
@@ -675,7 +670,7 @@ void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp) {
     tonelli_shanks_sqrt(ecc, t1, bp->y);
 }
 
-void EcEdAdd(EcEd* ecc, EcPoint* A, EcPoint* B, _out_ EcPoint* C) {
+void EcEdAdd(const EcEd* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
     GFElement z1, z2, z3, z4, z5, z6, z7;
     GFMul(ecc, A->x, B->x, z1); // z1 = x1 * x2
     GFMul(ecc, A->y, B->y, z2); // z2 = y1 * y2
@@ -699,7 +694,7 @@ void EcEdAdd(EcEd* ecc, EcPoint* A, EcPoint* B, _out_ EcPoint* C) {
     GFMul(ecc, z2, z4, C->y);
 }
 
-void EcEdDouble(EcEd* ecc, EcPoint* A, EcPoint* B) {
+void EcEdDouble(const EcEd* ecc, const EcPoint* A, EcPoint* B) {
     GFElement z1, z2, z3, z4, z5;
     GFSqr(ecc, A->x, z1);
     GFSqr(ecc, A->y, z2);
@@ -717,7 +712,7 @@ void EcEdDouble(EcEd* ecc, EcPoint* A, EcPoint* B) {
     GFMul(ecc, z2, z5, B->y);
 }
 
-void EcEdScalarMulOrdinary(EcEd* ecc, EcPoint* A, BigInt k, _out_ EcPoint* B) {
+void EcEdScalarMulOrdinary(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     EcPoint P, H;
     copy_point(&P, &uP, ecc->wordLen);
     copy_point(&H, A,  ecc->wordLen);
@@ -731,20 +726,20 @@ void EcEdScalarMulOrdinary(EcEd* ecc, EcPoint* A, BigInt k, _out_ EcPoint* B) {
     copy_point(B, &P, ecc->wordLen);
 }
 
-void EcEdConvertAffineToProjective(EcEd* ecc, EcPoint* P, EcPointProj* Q) {
+void EcEdConvertAffineToProjective(const EcEd* ecc, const EcPoint* P, EcPointProj* Q) {
     randomize(ecc->wordLen, Q->Z);
     GFMul(ecc, P->x, Q->Z, Q->X);
     GFMul(ecc, P->y, Q->Z, Q->Y);
 }
 
-void EcEdConvertProjectiveToAffine(EcEd* ecc, EcPointProj* P, EcPoint* Q) {
+void EcEdConvertProjectiveToAffine(const EcEd* ecc, const EcPointProj* P, EcPoint* Q) {
     GFElement Z_inv;
     GFInv(ecc, P->Z, Z_inv);
     GFMul(ecc, P->X, Z_inv, Q->x);
     GFMul(ecc, P->Y, Z_inv, Q->y);
 }
 
-void EcEdAddProj(EcEd* ecc, EcPointProj* A, EcPointProj* B, _out_ EcPointProj* C) {
+void EcEdAddProj(const EcEd* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
     GFElement a,b,c,d,e,e1,e2,e3,f;
     GFMul(ecc, A->Z, B->Z, a);
     GFSqr(ecc, a, b);
@@ -770,7 +765,7 @@ void EcEdAddProj(EcEd* ecc, EcPointProj* A, EcPointProj* B, _out_ EcPointProj* C
     GFMul(ecc, e2, e3, C->Z);
 }
 
-void EcEdDoubleProj(EcEd* ecc, EcPointProj* A, _out_ EcPointProj* B) {
+void EcEdDoubleProj(const EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
     GFElement a,b,c,d,e,e1,e2,e3,f;
     GFSqr(ecc, A->Z, a);
     GFSqr(ecc, a, b);
@@ -795,7 +790,7 @@ void EcEdDoubleProj(EcEd* ecc, EcPointProj* A, _out_ EcPointProj* B) {
     GFMul(ecc, e2, e3, B->Z);
 }
 
-void EcEdScalarMul(EcEd* ecc, EcPoint* A, BigInt k, _out_ EcPoint* B) {
+void EcEdScalarMul(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     EcPointProj P, H;
     EcEdConvertAffineToProjective(ecc, &uP, &P);
     EcEdConvertAffineToProjective(ecc, A, &H);
