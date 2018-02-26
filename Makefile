@@ -12,4 +12,5 @@ test.o: test.c
 eced.o: eced.c
 	$(GXX) $(CFLAGS) -c eced.c
 
-
+clear:
+	rm -f *.o

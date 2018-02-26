@@ -21,21 +21,21 @@ static u64 p256[]  = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x000000000000000
 static u64 p384[]  = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
                                           
 
-static inline u64 get_bit(GFElement a, u64 num) {
+static inline u64 get_bit(const GFElement a, u64 num) {
     return a[num/64] & ((u64)1 << (num % 64));
 }
 
-static inline void copy(GFElement a, GFElement b, int len) {
+static inline void copy(GFElement a, const GFElement b, int len) {
     for (int i=0;i<len;i++)
         a[i] = b[i];
 }
 
-static inline void copy_point(EcPoint* P, EcPoint* Q, int len) {
+static inline void copy_point(EcPoint* P, const EcPoint* Q, int len) {
     copy(P->x, Q->x, len);
     copy(P->y, Q->y, len);
 }
 
-static inline u64 add(u64 n, u64* a, u64* b, u64* c) {
+static inline u64 add(u64 n, const u64* a, const u64* b, u64* c) {
     u64 msb_a, msb_b, carry = 0;
 
     for (u32 i=0;i < n; i++) {
@@ -47,7 +47,7 @@ static inline u64 add(u64 n, u64* a, u64* b, u64* c) {
     return carry;
 }
 
-static inline u64 sub(u64 n, u64* a, u64* b, u64* c) {
+static inline u64 sub(u64 n, const u64* a, const u64* b, u64* c) {
     u64 borrow = 0;
     for (int i=0; i<n; i++) {
         u64 t_a = a[i];
@@ -82,7 +82,7 @@ static inline u64 _add_raw(u64 a, u64 b, u64* c) {
 #endif 
 }
 
-static inline void mul_by_word(EcEd* ecc, u64* a, u64 d, u64* c) {
+static inline void mul_by_word(const EcEd* ecc, const u64* a, u64 d, u64* c) {
     u64 carry = 0, carry_tmp;
     for (int i=0; i < ecc->wordLen; i++) {
         carry_tmp = carry;
@@ -92,7 +92,7 @@ static inline void mul_by_word(EcEd* ecc, u64* a, u64 d, u64* c) {
     c[ecc->wordLen] = carry;
 }
 
-static inline void mul(EcEd* ecc, u64* a, u64* b, u64* c) {
+static inline void mul(const EcEd* ecc, const u64* a, const u64* b, u64* c) {
     GFElement tmp;
     memset(c, 0, 2*8*ecc->wordLen);
     for (u64 i=0; i < ecc->wordLen; i++) {
@@ -138,7 +138,7 @@ static inline void randomize(u64 len, GFElement a) {
         a[i] = ((u64)rand() << 32) ^ (u64)rand();    
 }
 
-static inline void tonelli_shanks_sqrt(EcEd* ecc, GFElement a, GFElement r) {
+static inline void tonelli_shanks_sqrt(const EcEd* ecc, const GFElement a, GFElement r) {
     // p = Q*2^s
     GFElement Q, pp, z, tmp, c, t, R, b;
     copy(z, unity, ecc->wordLen);
@@ -222,7 +222,7 @@ void GFNeg(const EcEd* ecc, const GFElement a, GFElement c) {
     sub(ecc->wordLen, ecc->p, (u64*)a, (u64*)c);
 }
 
-void GFAdd(const EcEd* ecc, const GFElement a, const GFElement b, const GFElement c) {
+void GFAdd(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
     u64 carry = 0;
     switch (ecc->bitLen) {
         case 192: {
@@ -368,7 +368,7 @@ void GFSqr_FIPS224(const EcEd* ecc, const GFElement a, GFElement b) {
     GFMul_FIPS224(ecc, a, a, b);
 }
 
-/* FIPS-256 Fp: p = 2^256 – 2^224 + 2^192 + 2^96 – 1 */
+/* FIPS-256 Fp: p = 2^256 ï¿½ 2^224 + 2^192 + 2^96 ï¿½ 1 */
 
 void GFMul_FIPS256(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
 
@@ -573,7 +573,7 @@ int GFCmp(const EcEd* ecc, const GFElement a, const GFElement b) {
     return 0;
 }
 
-int EcEdInit(EcEd* ecc, EcPoint* bp, u64 bitLen, BigInt n, GFElement d) {
+int EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d) {
     srand(time(NULL));
     if ( (bitLen != 192) && (bitLen != 224) && (bitLen != 256) && (bitLen != 384)) {
         return -1;
