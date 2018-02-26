@@ -66,7 +66,7 @@ void EcEdAddProj(const EcEd* ecc, const EcPointProj* A, const EcPointProj* B, Ec
 void EcEdDoubleProj(const EcEd* ecc, const EcPointProj* A, EcPointProj* B);
 
 void EcEdScalarMul(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
-void EcEdScalarMulOrdinary(const EcEd* ecc, EcPoint* A, const BigInt k, EcPoint* B);
+void EcEdScalarMulOrdinary(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
 
 
 #endif /* ECED_H */
