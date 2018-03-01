@@ -450,21 +450,14 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c)
     tmp[0] = res[7];
     sub(len, c, tmp, c);
 
-    //printf(HEX_FORMAT,c[ecc->wordLen]);
+    
     while( c[ecc->wordLen] & MSB_M ) // in case of c < 0
     { 
-        /*u64 tmp = c[ecc->wordLen] & MSB_M;
-        printf(HEX_FORMAT,tmp);
-        printf("\n");
-        printf(HEX_FORMAT,c[ecc->wordLen]);
-        printf("\n");*/
         add(len,c,p256,c);
     }
-    //printf("here");
     u64 borrow = sub(len,c,p256,tmp); // in case of c > p256
     while(!borrow)
     {
-        //printf(HEX_FORMAT,borrow);
         borrow = sub(len,tmp,p256,tmp);
         copy(c,tmp,ecc->wordLen);
     }
