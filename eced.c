@@ -458,8 +458,8 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c)
     u64 borrow = sub(len,c,p256,tmp); // in case of c > p256
     while(!borrow)
     {
-        borrow = sub(len,tmp,p256,tmp);
-        copy(c,tmp,ecc->wordLen);
+        copy(c,tmp,len);
+        borrow = sub(len,tmp,p256,tmp);  
     }
 }
 
