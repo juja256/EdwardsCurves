@@ -245,12 +245,12 @@ void GFAdd(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
 			break;
 		}
 		case 256: {
-            GFElement tmp;
-            a[ecc->wordLen] = b[ecc->wordLen] = 0;
-            add(ecc->wordLen+1, a,b,c);
-            carry = sub(ecc->wordLen+1,c,p256,tmp);
-            if(!carry) 
-                copy(c,tmp,ecc->wordLen);
+            carry = add(ecc->wordLen, a,b,c);
+            if (carry) {
+                sub(ecc->wordLen, c, ecc->p, c);
+            }
+            if ((c[3]>0xFFFFFFFF00000001)||((c[3]==0xFFFFFFFF00000001)&&(c[2]>0))||((c[3]==0xFFFFFFFF00000001)&&(c[2]==0)&&(c[1]>0x00000000FFFFFFFF))||((c[3]==0xFFFFFFFF00000001)&&(c[2]==0)&&(c[1]==0x00000000FFFFFFFF)&&(c[0]==0xFFFFFFFFFFFFFFFF))) //in case of p<c<2^256
+                sub(ecc->wordLen, c, ecc->p, c);
             break;
         }
 		case 384: {
@@ -376,7 +376,7 @@ void GFSqr_FIPS224(const EcEd* ecc, const GFElement a, GFElement b) {
 }
 
 /*p = 2^256 – 2^224 + 2^192 + 2^96 – 1*/
-void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c) 
+void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c) 
 {
     GFElement tmp,res;
     mul(ecc, a, b, res);
@@ -470,11 +470,9 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b, _out_ GFElement c)
     }
 }
 
-void GFSqr_FIPS256(EcEd* ecc, GFElement a, _out_ GFElement b) {
+void GFSqr_FIPS256(EcEd* ecc, GFElement a,  GFElement  b) {
     GFMul_FIPS256(ecc, a, a, b);
 }
-
-void GFMulBy2(EcEd* ecc, GFElement a, GFElement b) {
 
 /* FIPS-384 Fp: p = p^384 - 2^128 - 2^96 +  2^32 - 1 */
 
