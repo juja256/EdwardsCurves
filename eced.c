@@ -14,7 +14,7 @@ static EcPoint uP  = { { 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0} };
 
 static u64 p192[]  = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
 
-static u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001, 0 };
+static u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001, 0 };//this stupid left 0 can be removed
 
 static u64 p224[]  = { 0x0000000000000001, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
 
@@ -249,7 +249,9 @@ void GFAdd(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
             if (carry) {
                 sub(ecc->wordLen, c, ecc->p, c);
             }
-            if ((c[3]>0xFFFFFFFF00000001)||((c[3]==0xFFFFFFFF00000001)&&(c[2]>0))||((c[3]==0xFFFFFFFF00000001)&&(c[2]==0)&&(c[1]>0x00000000FFFFFFFF))||((c[3]==0xFFFFFFFF00000001)&&(c[2]==0)&&(c[1]==0x00000000FFFFFFFF)&&(c[0]==0xFFFFFFFFFFFFFFFF))) //in case of p<c<2^256
+            //in case of p<c<2^256
+            //if ((c[3]>0xFFFFFFFF00000001)||((c[3]==0xFFFFFFFF00000001)&&(c[2]>0))||((c[3]==0xFFFFFFFF00000001)&&(c[2]==0)&&(c[1]>0x00000000FFFFFFFF))||((c[3]==0xFFFFFFFF00000001)&&(c[2]==0)&&(c[1]==0x00000000FFFFFFFF)&&(c[0]==0xFFFFFFFFFFFFFFFF))) 
+            if(GFCmp(ecc,c,p256)==1)
                 sub(ecc->wordLen, c, ecc->p, c);
             break;
         }
@@ -376,36 +378,41 @@ void GFSqr_FIPS224(const EcEd* ecc, const GFElement a, GFElement b) {
 }
 
 /*p = 2^256 – 2^224 + 2^192 + 2^96 – 1*/
-void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c) 
+void GFMul_FIPS256(const EcEd* ecc,const GFElement a,const GFElement b,  GFElement c) 
 {
     GFElement tmp,res;
     mul(ecc, a, b, res);
-    int len = ecc->wordLen + 1;
+    int len = ecc->wordLen; //can be removed, like everything commented in this function
     copy(c, res, ecc->wordLen);
-    c[ecc->wordLen] = 0;
-    
+    //c[ecc->wordLen] = 0;
+    int carry; //signed, its important
+    tmp[len] = 0;
+
     tmp[3] = res[7];
     tmp[2] = res[6];
     ((u32*)tmp)[3] = ((u32*)res)[11];
     ((u32*)tmp)[2] = 0;
     tmp[0] = 0;
     mul2(ecc->wordLen,tmp);
-    add(len,c,tmp,c);
+    carry = tmp[len]; //in case 2*tmp > 2^256
+    carry+=add(len,c,tmp,c);
 
+    tmp[len] = 0;
     ((u32*)tmp)[7] = 0;
     ((u32*)tmp)[6] = ((u32*)res)[15];
     ((u32*)tmp)[5] = ((u32*)res)[14];
     ((u32*)tmp)[4] = ((u32*)res)[13];
     ((u32*)tmp)[3] = ((u32*)res)[12];
     mul2(ecc->wordLen,tmp);
-    add(len,c,tmp,c);
+    carry+=tmp[len];
+    carry+=add(len,c,tmp,c);
 
     tmp[3] = res[7];
     tmp[2] = 0;
     ((u32*)tmp)[3] = 0;
     ((u32*)tmp)[2] = ((u32*)res)[10];
     tmp[0] = res[4];
-    add(len,c,tmp,c);
+    carry+=add(len,c,tmp,c);
 
     ((u32*)tmp)[7] = ((u32*)res)[8];
     ((u32*)tmp)[6] = ((u32*)res)[13];
@@ -414,7 +421,7 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c)
     ((u32*)tmp)[2] = ((u32*)res)[11];
     ((u32*)tmp)[1] = ((u32*)res)[10];
     ((u32*)tmp)[0] = ((u32*)res)[9];
-    add(len,c,tmp,c);
+    carry+=add(len,c,tmp,c);
 
     ((u32*)tmp)[7] = ((u32*)res)[10];
     ((u32*)tmp)[6] = ((u32*)res)[8];
@@ -423,14 +430,14 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c)
     ((u32*)tmp)[2] = ((u32*)res)[13];
     ((u32*)tmp)[1] = ((u32*)res)[12];
     ((u32*)tmp)[0] = ((u32*)res)[11];
-    sub(len, c, tmp, c);
+    carry-=sub(len, c, tmp, c);
 
     ((u32*)tmp)[7] = ((u32*)res)[11];
     ((u32*)tmp)[6] = ((u32*)res)[9];
     tmp[2] = 0;
     tmp[1] = res[7];
     tmp[0] = res[6];
-    sub(len, c, tmp, c);
+    carry-=sub(len, c, tmp, c);
 
     ((u32*)tmp)[7] = ((u32*)res)[12];
     ((u32*)tmp)[6] = 0;
@@ -440,7 +447,7 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c)
     ((u32*)tmp)[2] = ((u32*)res)[15];
     ((u32*)tmp)[1] = ((u32*)res)[14];
     ((u32*)tmp)[0] = ((u32*)res)[13];
-    sub(len, c, tmp, c);
+    carry-=sub(len, c, tmp, c);
 
     ((u32*)tmp)[7] = ((u32*)res)[13];
     ((u32*)tmp)[6] = 0;
@@ -448,10 +455,10 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c)
     ((u32*)tmp)[3] = ((u32*)res)[9];
     ((u32*)tmp)[2] = 0;
     tmp[0] = res[7];
-    sub(len, c, tmp, c);
+    carry-=sub(len, c, tmp, c);
 
-    
-    while( c[ecc->wordLen] & MSB_M ) // in case of c < 0
+    //this bullshit bellow works, but it is out of general style, can be removed
+    /*while( c[ecc->wordLen] & MSB_M ) // in case of c < 0
     { 
         add(len,c,p256,c);
     }
@@ -460,10 +467,25 @@ void GFMul_FIPS256(EcEd* ecc, GFElement a, GFElement b,  GFElement c)
     {
         copy(c,tmp,len);
         borrow = sub(len,tmp,p256,tmp);  
+    }*/
+    while(carry>0) //in case of c > 2^256
+    {
+        sub(len,c,p256,c);
+        carry--;
     }
+    while(carry<0) //in case of c<0
+    {
+        add(len,c,p256,c);
+        carry++;
+    }
+    //in case of 0<c<p256
+    //again, this crazy statement works, but its toooooooooooooo complex and crazy, and difficult
+    //if ((c[3]>0xFFFFFFFF00000001)||((c[3]==0xFFFFFFFF00000001)&&(c[2]>0))||((c[3]==0xFFFFFFFF00000001)&&(c[2]==0)&&(c[1]>0x00000000FFFFFFFF))||((c[3]==0xFFFFFFFF00000001)&&(c[2]==0)&&(c[1]==0x00000000FFFFFFFF)&&(c[0]==0xFFFFFFFFFFFFFFFF)))
+    if(GFCmp(ecc,c,p256)==1)
+        sub(len, c, p256, c);
 }
 
-void GFSqr_FIPS256(EcEd* ecc, GFElement a,  GFElement  b) {
+void GFSqr_FIPS256(const EcEd* ecc,const GFElement a,  GFElement  b) {
     GFMul_FIPS256(ecc, a, a, b);
 }
 
@@ -656,8 +678,10 @@ void GFSqr(const EcEd* ecc, const GFElement a, GFElement c) {
 }
 
 int GFCmp(const EcEd* ecc, const GFElement a, const GFElement b) {
-    for (int i=ecc->wordLen - 1; i>=0; i--) {
-        if (a[i] != b[i]) return 1;
+    for (int i=ecc->wordLen - 1; i>=0; i--)
+    {
+        if (a[i] > b[i]) return 1;
+        else if (a[i] < b[i]) return -1;
     }
     return 0;
 }
