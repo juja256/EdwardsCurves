@@ -1,25 +1,10 @@
-#include "eced.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
 
-#define MAX_U64    0xFFFFFFFFFFFFFFFF
-#define MSB_M      0x8000000000000000
-#define HEX_FORMAT "%.16llX"
+#include "const.h"
 
-static u64 unity[] = { 0x1, 0, 0, 0, 0, 0 };
-
-static EcPoint uP  = { { 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0} };
-
-static u64 p192[]  = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
-
-static u64 p224[]  = { 0x0000000000000001, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
-
-static u64 p256[]  = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000, 0xFFFFFFFF00000001 };
-
-static u64 p384[]  = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
-                                          
 
 static inline u64 get_bit(const GFElement a, u64 num) {
     return a[num/64] & ((u64)1 << (num % 64));
@@ -224,38 +209,26 @@ void GFNeg(const EcEd* ecc, const GFElement a, GFElement c) {
 
 void GFAdd(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
     u64 carry = 0;
-    switch (ecc->bitLen) {
-        case 192: {
-            carry = add(ecc->wordLen, a,b,c);
-            if (carry) {
-                sub(ecc->wordLen, c, ecc->p, c);
-            }
-            if ((c[2] == MAX_U64) && (c[1] == MAX_U64)) {
-                sub(ecc->wordLen, c, ecc->p, c);
-            }
-            break;
-        }
-		case 224: {
-			add(ecc->wordLen, a, b, c);
-			carry = (c[ecc->wordLen - 1] & ((u64)1 << 32));
-			if (carry) {
-				sub(ecc->wordLen, c, ecc->p, c);
-			}
-			break;
+    
+	if (ecc->bitLen == 192 || ecc->bitLen == 256 || ecc->bitLen == 384) {
+		carry = add(ecc->wordLen, a, b, c);
+		if (carry) {
+			sub(ecc->wordLen, c, ecc->p, c);
 		}
-		case 256: {
-
+		if (GFCmp(ecc, c, ecc->p) != -1) {
+			sub(ecc->wordLen, c, ecc->p, c);
 		}
-		case 384: {
-			carry = add(ecc->wordLen, a, b, c);
-			if (carry) {
-				sub(ecc->wordLen, c, ecc->p, c);
-			}
-
-
-			break;
+	}
+	else if (ecc->bitLen == 224) {
+		add(ecc->wordLen, a, b, c);
+		carry = (c[ecc->wordLen - 1] & ((u64)1 << 32));
+		if (carry) {
+			sub(ecc->wordLen, c, ecc->p, c);
 		}
-    }
+		if (GFCmp(ecc, c, ecc->p) == 1) {
+			sub(ecc->wordLen, c, ecc->p, c);
+		}
+	}
 }
 
 void GFSub(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
@@ -313,7 +286,7 @@ void GFMul_FIPS224(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
     copy(c, res, ecc->wordLen);
 
     u64 carry = 0;
-    c[3] = c[3] & 0xFFFFFFFF;
+    c[ecc->wordLen-1] = c[ecc->wordLen-1] & 0xFFFFFFFF;
 
 	// S_1
     tmp[0] = 0;
@@ -324,7 +297,7 @@ void GFMul_FIPS224(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
     ((u32*)tmp)[6] = ((u32*)res)[10];
     ((u32*)tmp)[7] = 0;
 
-    add(4, tmp, c, c);
+    add(ecc->wordLen, tmp, c, c);
 	
 	// S_2
     ((u32*)tmp)[3] = ((u32*)res)[11];
@@ -332,9 +305,20 @@ void GFMul_FIPS224(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
     ((u32*)tmp)[5] = ((u32*)res)[13];
     ((u32*)tmp)[6] = 0;
 
-    add(4, tmp, c, c);
+    add(ecc->wordLen, tmp, c, c);
 
 	// D_1
+	((u32*)tmp)[0] = ((u32*)res)[7];
+	((u32*)tmp)[1] = ((u32*)res)[8];
+	((u32*)tmp)[2] = ((u32*)res)[9];
+	((u32*)tmp)[3] = ((u32*)res)[10];
+	((u32*)tmp)[4] = ((u32*)res)[11];
+	((u32*)tmp)[5] = ((u32*)res)[12];
+	((u32*)tmp)[6] = ((u32*)res)[13];
+
+	sub(ecc->wordLen, c, tmp, c);
+
+	// D_2
     ((u32*)tmp)[0] = ((u32*)res)[11];
     ((u32*)tmp)[1] = ((u32*)res)[12];
     ((u32*)tmp)[2] = ((u32*)res)[13];
@@ -342,33 +326,25 @@ void GFMul_FIPS224(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
     tmp[2] = 0;
     tmp[3] = 0;
     
-	sub(4, c, tmp, c);
+	sub(ecc->wordLen, c, tmp, c);
 
-	// D_2
-    ((u32*)tmp)[0] = ((u32*)res)[7];
-    ((u32*)tmp)[1] = ((u32*)res)[8];
-    ((u32*)tmp)[2] = ((u32*)res)[9];
-    ((u32*)tmp)[3] = ((u32*)res)[10];
-    ((u32*)tmp)[4] = ((u32*)res)[11];
-    ((u32*)tmp)[5] = ((u32*)res)[12];
-    ((u32*)tmp)[6] = ((u32*)res)[13];
-
-    sub(4, c, tmp, c);
     
 	if (MSB_M & c[3]) {
-        add(4, c, p224, c);
+        add(ecc->wordLen, c, ecc->p, c);
     }
     else if (((u32*)c)[7] == 1) {
-        sub(4, c, p224, c);
+        sub(ecc->wordLen, c, ecc->p, c);
     }
-
+	if (GFCmp(ecc, c, p224) != -1) {
+		sub(ecc->wordLen, c, ecc->p, c);
+	}
 }
 
 void GFSqr_FIPS224(const EcEd* ecc, const GFElement a, GFElement b) {
     GFMul_FIPS224(ecc, a, a, b);
 }
 
-/* FIPS-256 Fp: p = 2^256 � 2^224 + 2^192 + 2^96 � 1 */
+/* FIPS-256 Fp: p = 2^256 - 2^224 + 2^192 + 2^96 - 1 */
 
 void GFMul_FIPS256(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
 
@@ -399,6 +375,7 @@ void GFMul_FIPS384(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
 
 	mul2(ecc->wordLen, tmp);
 	add(ecc->wordLen, tmp, c, c);
+	if (carry) sub(ecc->wordLen, c, ecc->p, c);
 
 	// S_2
 	((u32*)tmp)[0] = ((u32*)res)[12];
@@ -463,6 +440,7 @@ void GFMul_FIPS384(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
 	tmp[5] = 0;
 
 	add(ecc->wordLen, c, tmp, c);
+	if (carry) sub(ecc->wordLen, c, ecc->p, c);
 
 	// S_6
 	((u32*)tmp)[0] = ((u32*)res)[20];
@@ -476,6 +454,7 @@ void GFMul_FIPS384(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
 	tmp[5] = 0;
 
 	add(ecc->wordLen, c, tmp, c);
+	if (carry) sub(ecc->wordLen, c, ecc->p, c);
 
 	// D_1
 	((u32*)tmp)[0] = ((u32*)res)[23];
@@ -518,6 +497,12 @@ void GFMul_FIPS384(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
 	
 	sub(ecc->wordLen, c, tmp, c);
 
+	if (MSB_M & c[5]) {
+		add(6, c, p384, c);
+	}
+	/*else if (((u32*)c)[7] == 1) {
+		sub(ecc->wordLen, c, p384, c);
+	}*/
 }
 
 void GFSqr_FIPS384(const EcEd* ecc, const GFElement a, GFElement b) {
@@ -533,7 +518,7 @@ void GFMulBy2(const EcEd* ecc, const GFElement a, GFElement b) {
         carry = b[ecc->wordLen] & 1;
     }
     else {
-        carry = (b[ ecc->wordLen -1 ] & (1UL<<32) );
+        carry = (b[ ecc->wordLen -1 ] & ((u64)1<<32) );
     }
     if (carry) {
         sub(ecc->wordLen, b, ecc->p, b);
@@ -568,7 +553,8 @@ void GFSqr(const EcEd* ecc, const GFElement a, GFElement c) {
 
 int GFCmp(const EcEd* ecc, const GFElement a, const GFElement b) {
     for (int i=ecc->wordLen - 1; i>=0; i--) {
-        if (a[i] != b[i]) return 1;
+		if (a[i] > b[i]) return 1;
+		if (a[i] < b[i]) return -1;
     }
     return 0;
 }
