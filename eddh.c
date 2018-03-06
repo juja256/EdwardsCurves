@@ -2,7 +2,7 @@
 
 #define SUCCESS 0
 
-int EdDhStartKeyNegotioation(EcEd* ecc, EcPoint* Q_B, BigInt d_A, EcPoint* P_enc) {
+int EdDhStartKeyNegotiation(EcEd* ecc, EcPoint* Q_B, BigInt d_A, EcPoint* P_enc) {
     EcEdScalarMul(ecc, Q_B, d_A, P_enc);
     return SUCCESS;
 }
