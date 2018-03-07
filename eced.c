@@ -239,10 +239,10 @@ void GFAdd(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
 		case 224: {
 			add(ecc->wordLen, a, b, c);
 			carry = (c[ecc->wordLen - 1] & ((u64)1 << 32));
-			if (carry) {
+			if (carry) { //to my mind, this statement is useless
 				sub(ecc->wordLen, c, ecc->p, c);
 			}
-            if(GFCmp(ecc,c,p224)!=-1) {
+            if(GFCmp(ecc,c,p224)!=-1) { //this statement is enough
                 sub(ecc->wordLen, c, p224, c);
             }
                 
@@ -321,11 +321,15 @@ void GFSqr_FIPS192(const EcEd* ecc, const GFElement a, GFElement b) {
     GFMul_FIPS192(ecc, a, a, b);
 }
 
-/* FIPS-224 Fp: p = 2^224 - 2^96 - 1 */
+/* FIPS-224 Fp: p = 2^224 - 2^96 + 1 */
 
 void GFMul_FIPS224(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c) {
-    GFElement res, tmp;
-    mul(ecc, a, b, res);
+    GFElement res, tmp,ta,tb;
+    copy(ta, a, ecc->wordLen);
+    copy(tb, b, ecc->wordLen);
+    ta[3] = ta[3] & 0xFFFFFFFF; //truncated a
+    tb[3] = tb[3] & 0xFFFFFFFF; //truncated b
+    mul(ecc, ta, tb, res);
     copy(c, res, ecc->wordLen);
 
     u64 carry = 0;
@@ -371,10 +375,10 @@ void GFMul_FIPS224(const EcEd* ecc, const GFElement a, const GFElement b, GFElem
 
     sub(ecc->wordLen, c, tmp, c);
     
-	if (MSB_M & c[3]) {
+	while(MSB_M & c[3]) { // maybe just 'if' is enough
         add(ecc->wordLen, c, p224, c);
     }
-    else if (((u32*)c)[7] == 1) {
+    while(((u32*)c)[7] >= 1) { //and here
         sub(ecc->wordLen, c, p224, c);
     }
 
@@ -758,7 +762,7 @@ int EcEdCheckPointOnCurve(const EcEd* ecc, const EcPoint* P) {
 /* y^2 = (1 - x^2)/(1 - dx^2) */
 void EcEdGenerateBasePoint(const EcEd* ecc, EcPoint* bp) {
     randomize(ecc->wordLen, bp->x);
-    if (ecc->wordLen % 64 == 32) { // P-224
+    if (ecc->bitLen % 64 == 32) { // P-224
         bp->x[ecc->wordLen-1] &= 0xFFFFFFFF;
     }
     int y = 0;

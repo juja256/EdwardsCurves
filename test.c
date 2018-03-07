@@ -133,6 +133,7 @@ void test_fips224() {
     GFDump(&cur, e4);
 
     EcEdAdd(&cur, &G, &Z, &B);
+    printf("on curve %d\n",EcEdCheckPointOnCurve(&cur, &B));
 
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
@@ -152,6 +153,7 @@ void test_fips224() {
     e = __rdtsc();
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
+    printf("on curve %d\n",EcEdCheckPointOnCurve(&cur, &B));
     printf("Scalar Mul(Hom.) time: %d\n", e-s);
     
     EcEdScalarMulOrdinary(&cur, &G, cur.n, &B);
@@ -160,6 +162,7 @@ void test_fips224() {
     e = __rdtsc();
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
+    printf("on curve %d\n",EcEdCheckPointOnCurve(&cur, &B));
     printf("Scalar Mul(Ord.) time: %d\n", e-s);
 
     EcEdGenerateBasePoint(&cur, &B);
@@ -388,17 +391,17 @@ void test2()
 
 int main() {
 
-	printf("------- Testing P-192 -------\n");
-    test_fips192();
+	//printf("------- Testing P-192 -------\n");
+    //test_fips192();
 
     printf("------- Testing P-224 -------\n");
     test_fips224();
 
-    printf("------- Testing P-256 -------\n");
-    test_fips256();
+    //printf("------- Testing P-256 -------\n");
+    //test_fips256();
 	
-	printf("------- Testing P-384 -------\n");
-	test_fips384();
+	//printf("------- Testing P-384 -------\n");
+	//test_fips384();
 
     #ifdef _WIN64
     system("pause");
