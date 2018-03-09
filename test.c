@@ -391,17 +391,17 @@ void test2()
 
 int main() {
 
-	//printf("------- Testing P-192 -------\n");
-    //test_fips192();
+	printf("------- Testing P-192 -------\n");
+    test_fips192();
 
     printf("------- Testing P-224 -------\n");
     test_fips224();
 
-    //printf("------- Testing P-256 -------\n");
-    //test_fips256();
+    printf("------- Testing P-256 -------\n");
+    test_fips256();
 	
-	//printf("------- Testing P-384 -------\n");
-	//test_fips384();
+	printf("------- Testing P-384 -------\n");
+	test_fips384();
 
     #ifdef _WIN64
     system("pause");
