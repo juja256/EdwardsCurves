@@ -8,8 +8,8 @@ typedef struct {
     BigInt s;
 } EcSignature;
 
-int EdDsaGenerateKey(EcEd* ecc, BigInt* key, EcPoint* Q);
-int EdDsaSign(EcEd* ecc, BigInt key, BigInt hash, EcSignature* signature);
-int EdDsaVerify(EcEd* ecc, EcPoint* Q, BigInt hash, EcSignature* signature);
+int EdDsaGenerateKey(const EcEd* ecc, BigInt key, EcPoint* Q);
+int EdDsaSign(const EcEd* ecc, const BigInt key, const BigInt hash, EcSignature* signature);
+int EdDsaVerify(const EcEd* ecc, const EcPoint* Q, const BigInt hash, const EcSignature* signature);
 
 #endif /* EDDSA_H */
