@@ -112,25 +112,49 @@ static inline u64 word_bit_len(u64 n) {
     return 0;
 }
 
-static inline void mul2(u64 n, GFElement a) {
+static inline u64 bigint_bit_len(u64 nWords, BigInt a) {
+    u64 bit_len = nWords * 64;
+    int i=nWords-1;
+    do {
+        bit_len-=64;
+    } while (a[i--] == 0);
+    
+    bit_len += word_bit_len(a[i+1]);
+    return bit_len;
+}
+
+static inline void shl(u64 n, GFElement a, u64 bits) {
     u64 buf = 0;
     for (int i = 0; i < n; i++) {
         u64 cur = a[i];
-        a[i] <<= 1;
+        a[i] <<= bits;
         a[i] ^= buf;
-        buf = (cur & (MAX_U64 << ( 63 ))) >> ( 63 );
+        buf = (cur & (MAX_U64 << ( 64-bits ))) >> ( 64-bits );
     }
     a[n] = buf;
 }
 
-static inline void div2(u64 n, GFElement a) {
+#define mul2(n, a) shl((n), (a), 1)
+
+static inline void shr(u64 n, GFElement a, u64 bits) {
     u64 buf = 0;
     for (int i = n-1; i >= 0; i--) {
         u64 cur = a[i];
-        a[i] >>= 1;
+        a[i] >>= bits;
         a[i] ^= buf;
-        buf = (cur & (u64)1) << 63;
+        buf = (cur & (MAX_U64 >> ( 64-bits ))) << (64 - bits);
     }
+}
+
+#define div2(n, a) shr((n), (a), 1)
+
+void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res) {
+    BigInt tmp;
+    BigInt m;
+
+    copy(tmp, a, 2*n);
+
+
 }
 
 static inline void randomize(u64 len, GFElement a) {
