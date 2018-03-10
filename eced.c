@@ -118,31 +118,42 @@ static inline u64 bigint_bit_len(u64 nWords, BigInt a) {
     do {
         bit_len-=64;
     } while (a[i--] == 0);
-    
+
     bit_len += word_bit_len(a[i+1]);
     return bit_len;
 }
 
 static inline void shl(u64 n, GFElement a, u64 bits) {
     u64 buf = 0;
+    u64 chk = bits / 64;
+    bits = bits % 64;
     for (int i = 0; i < n; i++) {
         u64 cur = a[i];
-        a[i] <<= bits;
-        a[i] ^= buf;
+        a[i+chk] = cur << bits;
+        a[i+chk] ^= buf;
         buf = (cur & (MAX_U64 << ( 64-bits ))) >> ( 64-bits );
     }
-    a[n] = buf;
+    for (int i = 0; i < chk; i++) {
+        a[i] = 0;
+    }
+    a[n+chk] = buf;
 }
 
 #define mul2(n, a) shl((n), (a), 1)
 
 static inline void shr(u64 n, GFElement a, u64 bits) {
     u64 buf = 0;
-    for (int i = n-1; i >= 0; i--) {
+    u64 chk = bits / 64;
+    bits = bits % 64;
+
+    for (int i = n-1+chk; i >= chk; i--) {
         u64 cur = a[i];
-        a[i] >>= bits;
-        a[i] ^= buf;
+        a[i-chk] = cur >> bits;
+        a[i-chk] ^= buf;
         buf = (cur & (MAX_U64 >> ( 64-bits ))) << (64 - bits);
+    }
+    for (int i = n; i<n+chk; i++) {
+        a[i] = 0;
     }
 }
 
