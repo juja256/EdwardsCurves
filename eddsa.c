@@ -3,6 +3,7 @@
 #include <time.h>
 
 
+
 int EdDsaGenerateKey(const EcEd* ecc, BigInt key, EcPoint* Q) {
     srand(time(NULL));
     for (u64 i=0; i<ecc->wordLen; i++) {

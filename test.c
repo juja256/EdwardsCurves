@@ -133,6 +133,7 @@ void test_fips224() {
     GFDump(&cur, e4);
 
     EcEdAdd(&cur, &G, &Z, &B);
+    printf("on curve %d\n",EcEdCheckPointOnCurve(&cur, &B));
 
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
@@ -152,6 +153,7 @@ void test_fips224() {
     e = __rdtsc();
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
+    printf("on curve %d\n",EcEdCheckPointOnCurve(&cur, &B));
     printf("Scalar Mul(Hom.) time: %d\n", e-s);
     
     EcEdScalarMulOrdinary(&cur, &G, cur.n, &B);
@@ -160,6 +162,7 @@ void test_fips224() {
     e = __rdtsc();
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
+    printf("on curve %d\n",EcEdCheckPointOnCurve(&cur, &B));
     printf("Scalar Mul(Ord.) time: %d\n", e-s);
 
     EcEdGenerateBasePoint(&cur, &B);
