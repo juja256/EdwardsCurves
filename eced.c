@@ -101,8 +101,8 @@ static inline void mul(const EcEd* ecc, const u64* a, const u64* b, u64* c) {
     }
 }
 
-static inline u64 word_bit_len(u64 n) {
-    u32 c = 64;
+static inline int word_bit_len(u64 n) {
+    int c = 64;
     while (c) {
         if ((((u64)1 << (64-1)) & n) >> (64-1))
             return c;
@@ -112,8 +112,8 @@ static inline u64 word_bit_len(u64 n) {
     return 0;
 }
 
-static inline u64 bigint_bit_len(u64 nWords, BigInt a) {
-    u64 bit_len = nWords * 64;
+int bigint_bit_len(u64 nWords, const BigInt a) {
+    int bit_len = nWords * 64;
     int i=nWords-1;
     do {
         bit_len-=64;
@@ -123,49 +123,95 @@ static inline u64 bigint_bit_len(u64 nWords, BigInt a) {
     return bit_len;
 }
 
-static inline void shl(u64 n, GFElement a, u64 bits) {
+static inline void shl(u64 n, const GFElement a, GFElement res, u64 bits) {
     u64 buf = 0;
-    u64 chk = bits / 64;
+    int chk = bits / 64;
     bits = bits % 64;
-    for (int i = 0; i < n; i++) {
-        u64 cur = a[i];
-        a[i+chk] = cur << bits;
-        a[i+chk] ^= buf;
-        buf = (cur & (MAX_U64 << ( 64-bits ))) >> ( 64-bits );
+    u64 cur;
+
+    if (bits) {
+        for (int i = 0; i < n; i++) {
+            cur = a[i];
+            res[i+chk] = (cur << bits) ^ buf;
+            buf = (cur & (MAX_U64 << ( 64-bits ))) >> ( 64-bits );
+        }
     }
+    else {
+        for (int i = 0; i < n; i++) {
+            cur = a[i];
+            res[i+chk] = cur;
+        }
+    }
+
     for (int i = 0; i < chk; i++) {
-        a[i] = 0;
+        res[i] = 0;
     }
-    a[n+chk] = buf;
+    res[n+chk] = buf;
 }
 
-#define mul2(n, a) shl((n), (a), 1)
+#define mul2(n, a) shl((n), (a), (a), 1)
 
-static inline void shr(u64 n, GFElement a, u64 bits) {
+static inline void shr(u64 n, const GFElement a, GFElement res, u64 bits) {
     u64 buf = 0;
-    u64 chk = bits / 64;
+    int chk = bits / 64;
     bits = bits % 64;
+    u64 cur;
 
-    for (int i = n-1+chk; i >= chk; i--) {
-        u64 cur = a[i];
-        a[i-chk] = cur >> bits;
-        a[i-chk] ^= buf;
-        buf = (cur & (MAX_U64 >> ( 64-bits ))) << (64 - bits);
+    if (bits) {
+        for (int i = n-1+chk; i >= chk; i--) {
+            cur = a[i];
+            res[i-chk] = (cur >> bits) ^ buf;
+            buf = (cur & (MAX_U64 >> ( 64-bits ))) << (64 - bits);
+        }
+    }
+    else {
+        for (int i = n-1+chk; i >= chk; i--) {
+            cur = a[i];
+            res[i-chk] = cur;
+        }
     }
     for (int i = n; i<n+chk; i++) {
-        a[i] = 0;
+        res[i] = 0;
     }
 }
 
-#define div2(n, a) shr((n), (a), 1)
+#define div2(n, a) shr((n), (a), (a), 1)
+
+void dump(u64 n, const BigInt a) {
+    for (int i=n-1; i>=0; i--)
+        printf(HEX_FORMAT, a[i]);
+    printf("\n");
+}
+
+int cmp(u64 n, const BigInt a, const BigInt b) {
+    for (int i = n - 1; i >= 0; i--)
+    {
+        if (a[i] > b[i]) return 1;
+        else if (a[i] < b[i]) return -1;
+    }
+    return 0;
+}
 
 void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res) {
     BigInt tmp;
     BigInt m;
 
-    copy(tmp, a, 2*n);
+    copy(res, a, 2*n);
 
+    int k = bigint_bit_len(n, p);
+    int t;
+    
 
+    while (cmp(2*n, res, p) != -1) {
+        t = bigint_bit_len(2*n, res);
+        shl(2*n, p, m, t-k);
+        if (cmp(2*n, m, res) == 1) {
+            t--;
+            shl(2*n, p, m, t-k);
+        }
+        sub(2*n, res, m, res);
+        printf("%d %d\n", k,t);
+    }
 }
 
 static inline void randomize(u64 len, GFElement a) {

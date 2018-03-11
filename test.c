@@ -389,6 +389,33 @@ void test2()
 	printf("Generated point, on curve: %d\n", isOnCurve);
 }
 
+extern void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res);
+extern int bigint_bit_len(u64 nWords, const BigInt a);
+
+void test_eddsa() {
+    EcEd cur;
+    EcPoint G, H, A, B, Z;
+    BigInt n, d, p;
+    GFElement e1, e2 ,e3, e4, X, a;
+    GFInitFromString(G.x, "44F083BB00E51AD91A2743284D31F57EE5C84826FCC91F4B");
+    GFInitFromString(G.y, "15FC16E5870524E0DBBE9EC8BB9F066C02A02B1978D4E029");
+    GFInitFromString(X,   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000");
+    GFInitFromString(d,   "6DBA6A");
+    GFInitFromString(p,   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF");
+    GFInitFromString(n,   "3FFFFFFFFFFFFFFFFFFFFFFFEA75D4027230DD4DFFDB0455");
+    GFInitFromString(Z.x, "00");
+    GFInitFromString(Z.y, "01");
+    int r = EcEdInit(&cur, &G, 192, n, d);
+
+    GFInitFromString(p, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF");
+    GFInitFromString(a, "FFFFFFFFFFFFFFFFF0FFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF");
+    //GFDump(&cur, a);
+    printf( "BitLen: %d\n",  bigint_bit_len(3, d) );
+    printf("Reduction result: \n");
+    basic_reduction(3, a, p, a);
+    GFDump(&cur, a);
+}
+
 int main() {
 
 	printf("------- Testing P-192 -------\n");
@@ -403,6 +430,8 @@ int main() {
 	printf("------- Testing P-384 -------\n");
 	test_fips384();
 
+    printf("------- Testing ECDSA -------\n");
+    test_eddsa();
     #ifdef _WIN64
     system("pause");
     #endif

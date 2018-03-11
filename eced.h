@@ -45,6 +45,7 @@ typedef struct _EcEd {
     TGFSqrFunc* GFSqr;
 } EcEd;
 
+
 void GFInitFromString(GFElement a, const char* str);
 void GFDump(const EcEd* ecc, const GFElement a);
 void GFAdd(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c);
