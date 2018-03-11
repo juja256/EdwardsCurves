@@ -57,6 +57,7 @@ void GFMul(const EcEd* ecc, const GFElement a, const GFElement b, GFElement c);
 void GFSqr(const EcEd* ecc, const GFElement a, GFElement c);
 
 int  EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d);
+int  EcEdInitStandardCurve(EcEd* ecc, u64 bitLen);
 void EcEdGenerateBasePoint(const EcEd* ecc, EcPoint* bp);
 int  EcEdCheckPointOnCurve(const EcEd* ecc, const EcPoint* P);
 
