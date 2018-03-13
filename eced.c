@@ -147,15 +147,15 @@ static inline void tonelli_shanks_sqrt(const EcEd* ecc, const GFElement a, GFEle
     u64 M, S = 1;
     div2(ecc->wordLen, Q);
     copy(pp, Q, ecc->wordLen);
-
+    //p-1 = 2^s*Q
     while ((Q[0] & 1) == 0) {
         div2(ecc->wordLen, Q);
         S++;
     }
-
+    //finding z - non quadratic residue
     while(1) {
         GFPow(ecc, z, pp, tmp); 
-        if (!GFCmp(ecc, tmp, unity))
+        if (GFCmp(ecc, tmp, unity))
             break;
         else 
             GFAdd(ecc, z, unity, z);
@@ -167,25 +167,26 @@ static inline void tonelli_shanks_sqrt(const EcEd* ecc, const GFElement a, GFEle
     GFAdd(ecc, Q, unity, tmp);
     div2(ecc->wordLen, tmp);
     u64 i=1;
-    GFPow(ecc, a, tmp, R);
+    GFPow(ecc, a, tmp, R); // tmp = (Q+1)/2
 
     while (1) {
         if (!GFCmp(ecc, t, unity)) {
             copy(r, R, ecc->wordLen);
             break;
         } 
-        for (i=1; i<S; i++) {
+        copy(tmp,t,ecc->wordLen); //copying value of t, we'll need it later
+        for (i=1; i<M; i++) {
             GFSqr(ecc, t, t);
-            if (!GFCmp(ecc, t, unity));
+            if (!GFCmp(ecc, t, unity))
                 break;
         }
         copy(b, c, ecc->wordLen);
-        for (u64 j=0; j<M-i; j++) {
+        for (u64 j=0; j<M-i-1; j++) {
             GFSqr(ecc, b, b);
         }
         M = i;
         GFSqr(ecc, b, c);
-        GFMul(ecc, t, c, t);
+        GFMul(ecc, tmp, c, t); //original value of t multiplied by c^2 
         GFMul(ecc, R, b, R);
     }
     
