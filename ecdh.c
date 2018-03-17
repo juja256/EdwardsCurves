@@ -1,4 +1,4 @@
-#include "eddh.h"
+#include "ecdh.h"
 
 #define SUCCESS 0
 

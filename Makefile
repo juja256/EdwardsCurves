@@ -1,16 +1,19 @@
-GXX:= g++
+GXX:= gcc
 CFLAGS:= -no-pie -O -g
 
 all: test
 
-test: test.o eced.o
-	$(GXX) $(CFLAGS) test.o eced.o -o test
+test: test.o ec.o gf.o
+	$(GXX) $(CFLAGS) test.o ec.o gf.o -o test
 
 test.o: test.c
 	$(GXX) $(CFLAGS) -c test.c
 
-eced.o: eced.c
-	$(GXX) $(CFLAGS) -c eced.c
+ec.o: ec.c
+	$(GXX) $(CFLAGS) -c ec.c
+
+gf.o: gf.c
+	$(GXX) $(CFLAGS) -c gf.c
 
 clear:
 	rm -f *.o
