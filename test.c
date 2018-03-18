@@ -10,13 +10,13 @@
 #include <x86intrin.h>
 #endif // _WIN64
 
-void test_fips(u64 bit_len) {
+void test_fips(u64 bit_len, int isEdwards) {
     Ec cur;
     EcPoint G, H, A, B, Z;
     BigInt n, d, p;
     GFElement e1, e2 ,e3, e4, X;
 
-    int r = EcInitStandardCurve(&cur, bit_len, 1);
+    int r = EcInitStandardCurve(&cur, bit_len, isEdwards);
 
     printf("Init status: %d %d %d\n", r, cur.bitLen, cur.wordLen);
 
@@ -73,20 +73,28 @@ void test_eddsa() {
 
 int main() {
 
-	printf("------- Testing P-192 -------\n");
-    test_fips(192);
+	printf("------- Testing P-192 (Edwards) -------\n");
+    test_fips(192, 1);
+    printf("------- Testing P-192 (Weierstrass) -------\n");
+    test_fips(192, 0);
 
-    printf("------- Testing P-224 -------\n");
-    test_fips(224);
+    printf("------- Testing P-224 (Edwards) -------\n");
+    test_fips(224, 1);
+    printf("------- Testing P-224 (Weierstrass) -------\n");
+    test_fips(224, 0);
 
-    printf("------- Testing P-256 -------\n");
-    test_fips(256);
-	
-	printf("------- Testing P-384 -------\n");
-	test_fips(384);
+    printf("------- Testing P-256 (Edwards) -------\n");
+    test_fips(256, 1);
+    printf("------- Testing P-256 (Weierstrass) -------\n");
+    test_fips(256, 0);
 
-    printf("------- Testing ECDSA -------\n");
-    test_eddsa();
+	printf("------- Testing P-384 (Edwards) -------\n");
+	test_fips(384, 1);
+    printf("------- Testing P-384 (Weierstrass) -------\n");
+	test_fips(384, 0);
+
+    //printf("------- Testing ECDSA -------\n");
+    //test_eddsa();
     #ifdef _WIN64
     system("pause");
     #endif
