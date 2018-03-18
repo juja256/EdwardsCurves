@@ -5,17 +5,11 @@
 #include <time.h>
 #include <string.h>
 
-
-int EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d) {
+void BaseEcInit(Ec* ecc,const EcPoint* bp,u64 bitLen, const BigInt n)
+{
     srand(time(NULL));
-
-    if ( (bitLen != 192) && (bitLen != 224) && (bitLen != 256) && (bitLen != 384)) {
-        return -1;
-    }
-    ecc->isEdwards = 1;
     ecc->bitLen = bitLen;
     ecc->wordLen = (bitLen%64 == 0) ? (bitLen / 64) : (bitLen / 64) + 1;
-    copy(ecc->d, d, ecc->wordLen);
     copy(ecc->n, n, ecc->wordLen);
     copy(ecc->BasePoint.x, bp->x, ecc->wordLen);
     copy(ecc->BasePoint.y, bp->y, ecc->wordLen);
@@ -48,6 +42,27 @@ int EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFE
     BigInt two;
     memset(two, 0, ecc->wordLen * 8); two[0] = 2;
     sub(ecc->wordLen, ecc->p, two, ecc->p_min_two);
+}
+
+int EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d) {
+    if ( (bitLen != 192) && (bitLen != 224) && (bitLen != 256) && (bitLen != 384)) {
+        return -1;
+    }
+    BaseEcInit(ecc,bp,bitLen,n);
+    ecc->isEdwards = 1;
+    copy(ecc->d, d, ecc->wordLen);
+    return 0;
+}
+
+int EcWInit(EcW* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement a,const GFElement b)
+{   
+    if ( (bitLen != 192) && (bitLen != 224) && (bitLen != 256) && (bitLen != 384)) {
+        return -1;
+    }
+    BaseEcInit(ecc,bp,bitLen,n);
+    ecc->isEdwards = 0;
+    copy(ecc->a, a, ecc->wordLen);
+    copy(ecc->b, b, ecc->wordLen);
     return 0;
 }
 
@@ -62,9 +77,19 @@ int EcEdCheckPointOnCurve(const EcEd* ecc, const EcPoint* P) {
     return !GFCmp(ecc, x, z); //1 - ok
 }
 
+int EcWCheckPointOnCurve(const EcW* ecc, const EcPoint* P) {
+    GFElement l,r; //left,right
+    GFSqr(ecc, P->y, l);
+    GFSqr(ecc, P->x, r);
+    GFAdd(ecc, r, ecc->a, r);
+    GFMul(ecc, r, P->x, r); // now r = x(x^2 + a)
+    GFAdd(ecc, r, ecc->b, r);
+    return !GFCmp(ecc, l, r); //1 - ok
+}
+
 int EcCheckPointOnCurve(const Ec* ecc, const EcPoint* P) {
     if (ecc->isEdwards) return EcEdCheckPointOnCurve(ecc, P);
-    return -1;
+    else return EcWCheckPointOnCurve(ecc, P);
 }
 
 /* x^2 + y^2 = 1 + dx^2y^2 */
@@ -98,8 +123,35 @@ void EcEdGenerateBasePoint(const EcEd* ecc, EcPoint* bp) {
     tonelli_shanks_sqrt(ecc, t1, bp->y);
 }
 
+//y^2 = x^3 + ax + b
+void EcWGenerateBasePoint(const EcW* ecc, EcPoint* bp) {
+    randomize(ecc->wordLen, bp->x);
+    if (ecc->bitLen % 64 == 32) { // P-224
+        bp->x[ecc->wordLen-1] &= 0xFFFFFFFF;
+    }
+    int y = 0;
+    GFElement sum, pp,tmp;
+    copy(pp, ecc->p, ecc->wordLen);
+    div2(ecc->wordLen, pp);
+
+    do {
+        GFSqr(ecc,bp->x,sum);
+        GFAdd(ecc,sum,ecc->a,sum);
+        GFMul(ecc,sum,bp->x,sum);
+        GFAdd(ecc,sum,ecc->b,sum);
+        GFPow(ecc, sum, pp, tmp);
+        y = !GFCmp(ecc, tmp, unity);
+        if (!y)
+            GFAdd(ecc, bp->x, unity, bp->x);
+        else break;
+    } while(1);
+
+    tonelli_shanks_sqrt(ecc, sum, bp->y);
+}
+
 void EcGenerateBasePoint(const Ec* ecc, EcPoint* bp) {
     if (ecc->isEdwards) EcEdGenerateBasePoint(ecc, bp);
+    else EcWGenerateBasePoint(ecc,bp);
 }
 
 void EcEdAdd(const EcEd* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
@@ -126,8 +178,27 @@ void EcEdAdd(const EcEd* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
     GFMul(ecc, z2, z4, C->y);
 }
 
+void EcWAdd(const EcW* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C)
+{
+    GFElement s,difX,difY;
+    GFSub(ecc,A->x,B->x,difX); // difX = x1-x2
+    GFSub(ecc,A->y,B->y,difY); // difY = y1-y2
+    //s = difY/difX
+    GFInv(ecc,difX,difX);
+    GFMul(ecc,difY,difX,s);
+    //x3 = s^2 - x1 - x2
+    GFSqr(ecc,s,C->x);
+    GFSub(ecc,C->x,A->x,C->x);
+    GFSub(ecc,C->x,B->x,C->x);
+    //y3 = -y1 + s(x1 - x3)
+    GFSub(ecc,A->x,C->x,C->y); //y3 = x1 - x3
+    GFMul(ecc,C->y,s,C->y); //y3 = y3 * s
+    GFSub(ecc,C->y,A->y,C->y); //y3 = y3 - y1
+}
+
 void EcAdd(const Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
     if (ecc->isEdwards) EcEdAdd(ecc, A, B, C);
+    else EcWAdd(ecc,A,B,C); //i'll use your style ... for now
 }
 
 void EcEdDouble(const EcEd* ecc, const EcPoint* A, EcPoint* B) {
@@ -148,8 +219,30 @@ void EcEdDouble(const EcEd* ecc, const EcPoint* A, EcPoint* B) {
     GFMul(ecc, z2, z5, B->y);
 }
 
+void EcWDouble(const EcW* ecc, const EcPoint* A, EcPoint* B)
+{
+    GFElement s,tmp;
+    //s = (2*x1^2 + a)/2/y1
+    GFSqr(ecc,A->x,s);
+    GFMulBy2(ecc,s,tmp);// i suppose that this is much faster than GFMul(s,3) 
+    GFAdd(ecc,tmp,s,s); //
+    GFAdd(ecc,s,ecc->a,s);
+    GFMulBy2(ecc,A->y,tmp); 
+    GFInv(ecc,tmp,tmp);
+    GFMul(ecc,s,tmp,s);
+    //x2 = s^2 - 2*x1
+    GFSqr(ecc,s,B->x);
+    GFMulBy2(ecc,A->x,tmp);
+    GFSub(ecc,B->x,tmp,B->x);
+    //y2 = -y1 + s(x1 - x2)
+    GFSub(ecc,A->x,B->x,B->y);
+    GFMul(ecc,B->y,s,B->y);
+    GFSub(ecc,B->y,A->y,B->y);
+}
+
 void EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B) {
     if (ecc->isEdwards) EcEdDouble(ecc, A, B);
+    else EcWDouble(ecc,A,B);
 }
 
 void EcEdScalarMul(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
@@ -166,8 +259,24 @@ void EcEdScalarMul(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B
     copy_point(B, &P, ecc->wordLen);
 }
 
+void EcWScalarMul(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
+{
+    EcPoint P, H;
+    copy_point(&P, &uP, ecc->wordLen);
+    copy_point(&H, A,  ecc->wordLen);
+
+    for (u32 i=0; i<ecc->bitLen; i++) {
+        if (get_bit(k, i)) {
+            EcWAdd(ecc, &P, &H, &P);
+        }
+        EcWDouble(ecc, &H, &H); 
+    }
+    copy_point(B, &P, ecc->wordLen);
+}
+
 void EcScalarMul(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     if (ecc->isEdwards) EcEdScalarMul(ecc, A, k, B);
+    else EcWScalarMul(ecc, A, k, B);
 }
 
 void EcConvertAffineToProjective(const Ec* ecc, const EcPoint* P, EcPointProj* Q) {
@@ -209,8 +318,45 @@ void EcEdAddProj(const EcEd* ecc, const EcPointProj* A, const EcPointProj* B, Ec
     GFMul(ecc, e2, e3, C->Z);
 }
 
+void EcWAddProj(const EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C)
+{
+    GFElement u,v,a,tmp,x1z2,sqrv;
+    //u = y2z1 - y1z2
+    GFMul(ecc,B->Y,A->Z,u);
+    GFMul(ecc,B->Z,A->Y,tmp);
+    GFSub(ecc,u,tmp,u);
+    //v = x2z1 - x1z2
+    GFMul(ecc,A->X,B->Z,x1z2); 
+    GFMul(ecc,A->Z,B->X,v);
+    GFSub(ecc,v,x1z2,v);
+    
+    GFMul(ecc,A->Z,B->Z,tmp); // tmp = z1*z2
+    GFSqr(ecc,v,sqrv); 
+    //z3 = v^3*z1*z2
+    GFMul(ecc,sqrv,v,C->Z);
+    GFMul(ecc,C->Z,tmp,C->Z);
+    //a = u^2*z1*z2 - v^2(v+2*x1*x2)
+    GFSqr(ecc,u,a);
+    GFMul(ecc,a,tmp,a);
+    GFMulBy2(ecc,x1z2,tmp);
+    GFAdd(ecc,tmp,v,tmp);
+    GFMul(ecc,tmp,sqrv,tmp);
+    GFSub(ecc,a,tmp,a);
+    //x3 = va
+    GFMul(ecc,v,a,C->X);
+    //y3 = v^2(u*x1*z2 - v*y1*z2) - u*a 
+    GFMul(ecc,u,x1z2,C->Y);
+    GFMul(ecc,A->Y,B->Z,tmp);
+    GFMul(ecc,tmp,v,tmp);
+    GFSub(ecc,C->Y,tmp,C->Y);
+    GFMul(ecc,C->Y,sqrv,C->Y);
+    GFMul(ecc,u,a,tmp);
+    GFSub(ecc,C->Y,tmp,C->Y);
+}
+
 void EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
     if (ecc->isEdwards) EcEdAddProj(ecc, A, B, C);
+    else EcWAddProj(ecc, A, B, C);
 }
 
 void EcEdDoubleProj(const EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
@@ -238,8 +384,50 @@ void EcEdDoubleProj(const EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
     GFMul(ecc, e2, e3, B->Z);
 }
 
+void EcWDoubleProj(const EcW* ecc, const EcPointProj* A, EcPointProj* B)
+{
+    GFElement h,s,w,b,tmp;
+    //w = a*z1^2 + 3*x1^2
+    GFSqr(ecc,A->X,tmp); 
+    GFMulBy2(ecc,tmp,w);
+    GFAdd(ecc,w,tmp,w); //now w = 3*x1^2
+    GFSqr(ecc,A->Z,tmp);
+    GFMul(ecc,tmp,ecc->a,tmp);
+    GFAdd(ecc,w,tmp,w);
+    //s = y1*z1
+    GFMul(ecc,A->Y,A->Z,s);
+    //b = x1*y1*s
+    GFMul(ecc,A->X,A->Y,b);
+    GFMul(ecc,b,s,b);
+    //h = w^2-8b
+    GFSqr(ecc,w,h);
+    GFMulBy2(ecc,b,tmp);
+    GFMulBy2(ecc,tmp,tmp);
+    GFMulBy2(ecc,tmp,tmp);//now tmp = 8b
+    GFSub(ecc,h,tmp,h);
+    //x2 = 2hs
+    GFMul(ecc,h,s,B->X);
+    GFMulBy2(ecc,B->X,B->X);
+    //y2 = w(4b - h) - 8(y1*s)^2
+    GFMulBy2(ecc,b,B->Y);
+    GFMulBy2(ecc,B->Y,B->Y);
+    GFSub(ecc,B->Y,h,B->Y);
+    GFMul(ecc,w,B->Y,B->Y);
+    GFMul(ecc,A->Y,s,tmp);
+    GFSqr(ecc,tmp,tmp);
+    GFMulBy2(ecc,tmp,tmp);
+    GFMulBy2(ecc,tmp,tmp);
+    GFMulBy2(ecc,tmp,tmp);
+    GFSub(ecc,B->Y,tmp,B->Y);
+    //z2 = 8s^3
+    GFMulBy2(ecc,s,tmp);
+    GFSqr(ecc,tmp,B->Z);
+    GFMul(ecc,B->Z,tmp,B->Z);
+}
+
 void EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B) {
     if (ecc->isEdwards) EcEdDoubleProj(ecc, A, B);
+    else EcWDoubleProj(ecc, A, B);
 }
 
 void EcEdScalarMulProj(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
@@ -256,9 +444,26 @@ void EcEdScalarMulProj(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoin
     EcConvertProjectiveToAffine(ecc, &P, B);
 }
 
+void EcWScalarMulProj(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
+    EcPointProj P, H;
+    EcConvertAffineToProjective(ecc, &uP, &P);
+    EcConvertAffineToProjective(ecc, A, &H);
+
+    for (u32 i=0; i<ecc->bitLen; i++) {
+        if (get_bit(k, i)) {
+            EcWAddProj(ecc, &P, &H, &P);
+        }
+        EcWDoubleProj(ecc, &H, &H); 
+    }
+    EcConvertProjectiveToAffine(ecc, &P, B);
+}
+
 void EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     if (ecc->isEdwards) EcEdScalarMulProj(ecc, A, k, B);
+    else EcWScalarMulProj(ecc, A, k, B);
 }
+
+
 
 /*
     Standard Edwards full curves:
@@ -289,11 +494,51 @@ void EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B
     n = 4000000000000000000000000000000000000000000000005063576B5A9A0C3A23E9510EA680650B4884E63A2968DD71
     x = 1FC0E8E61F599813E376D11F7510D77F177C2F1CDE19FD14D63A2EC5EAD4D0DED1BD06676CCF365243BF3C0675A31B62
     y = F52B4FA352B257D7A102FA45C56A50CCBDB3DEC053D5610EDBD0188C11F321F28A43E2FC50395E4A8BD0029AE71D51AA
+
+========================================================================================================
+
+    Weiestrass curves
+
+    everywhere a = -3
+
+        P-192
+    p = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF
+    n = FFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831
+    a = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC
+    b = 64210519E59C80E70FA7E9AB72243049FEB8DEECC146B9B1
+    x = 188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012
+    y = 07192B95FFC8DA78631011ED6B24CDD573F977A11E794811
+
+        P-224
+    p = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001
+    n = FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D
+    a = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFE
+    b = B4050A850C04B3ABF54132565044B0B7D7BFD8BA270B39432355FFB4
+    x = B70E0CBD6BB4BF7F321390B94A03C1D356C21122343280D6115C1D21
+    y = BD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34
+
+        P-256
+    p = FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
+    n = FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
+    a = FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC
+    b = 5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B
+    x = 6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296
+    y = 4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
+
+        P-384
+    p = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF
+    n = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973
+    a = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFC
+    b = B3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF
+    x = AA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B9859F741E082542A385502F25DBF55296C3A545E3872760AB7
+    y = 3617DE4A96262C6F5D9E98BF9292DC29F8F41DBD289A147CE9DA3113B5F0B8C00A60B1CE1D7E819D7A431D7C90EA0E5F
+
 */
 int EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards) {
+    GFElement p,n;
+    EcPoint G;
     if (isEdwards) {
-        GFElement p,d,n;
-        EcPoint G;
+        GFElement d;
         switch (bitLen) {
             case 192:
             GFInitFromString(p, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF");
@@ -328,5 +573,45 @@ int EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards) {
         }
         return EcEdInit(ecc, &G, bitLen, n, d);
     }
-    return -2;
+    else
+    {
+        GFElement a,b;
+        switch (bitLen) {
+            case 192:
+            GFInitFromString(p, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF");
+            GFInitFromString(n, "FFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831");
+            GFInitFromString(a, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC");
+            GFInitFromString(b, "64210519E59C80E70FA7E9AB72243049FEB8DEECC146B9B1");
+            GFInitFromString(G.x, "188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012");
+            GFInitFromString(G.y, "07192B95FFC8DA78631011ED6B24CDD573F977A11E794811");
+            break;
+            case 224:
+            GFInitFromString(p, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001");
+            GFInitFromString(n, "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D");
+            GFInitFromString(a, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFE");
+            GFInitFromString(b, "B4050A850C04B3ABF54132565044B0B7D7BFD8BA270B39432355FFB4");
+            GFInitFromString(G.x, "B70E0CBD6BB4BF7F321390B94A03C1D356C21122343280D6115C1D21");
+            GFInitFromString(G.y, "BD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34");
+            break;
+            case 256:
+            GFInitFromString(p, "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF");
+            GFInitFromString(n, "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551");
+            GFInitFromString(a, "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC");
+            GFInitFromString(b, "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B");
+            GFInitFromString(G.x, "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
+            GFInitFromString(G.y, "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
+            break;
+            case 384:
+            GFInitFromString(p, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF");
+            GFInitFromString(n, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973");
+            GFInitFromString(a, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFC");
+            GFInitFromString(b, "B3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF");
+            GFInitFromString(G.x, "AA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B9859F741E082542A385502F25DBF55296C3A545E3872760AB7");
+            GFInitFromString(G.y, "3617DE4A96262C6F5D9E98BF9292DC29F8F41DBD289A147CE9DA3113B5F0B8C00A60B1CE1D7E819D7A431D7C90EA0E5F");
+            break;
+            default:
+            return -1;
+        }
+        return EcWInit(ecc, &G, bitLen, n, a, b);
+    }
 }
