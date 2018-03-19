@@ -6,7 +6,7 @@ typedef unsigned u32;
 typedef unsigned char u8;
 
 typedef u64 GFElement[12];
-typedef u64 BigInt[6];
+typedef u64 BigInt[7];
 
 typedef struct _EcPoint {
     GFElement x;

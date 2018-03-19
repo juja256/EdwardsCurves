@@ -41,7 +41,8 @@ void GFInv(const Ec* ecc, const GFElement a, GFElement b);
 int  GFCmp(const Ec* ecc, const GFElement a, const GFElement b);
 void GFMul(const Ec* ecc, const GFElement a, const GFElement b, GFElement c);
 void GFSqr(const Ec* ecc, const GFElement a, GFElement c);
-void GFMulBy2(const Ec* ecc, const GFElement a, GFElement b);
+void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b);
+#define GFMulBy2(e, a, b) GFMulBy2Power(e, a, 1, b);
 
 void GFMul_FIPS192(const Ec* ecc, const GFElement a, const GFElement b, GFElement c);
 void GFMul_FIPS224(const Ec* ecc, const GFElement a, const GFElement b, GFElement c);

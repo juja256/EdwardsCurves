@@ -713,19 +713,25 @@ void GFSqr_FIPS384(const Ec* ecc, const GFElement a, GFElement b) {
     GFMul_FIPS384(ecc, a, a, b);
 }
 
-void GFMulBy2(const Ec* ecc, const GFElement a, GFElement b) {
+void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b) {
     u64 carry = 0;
     copy(b, a, ecc->wordLen);
     b[ecc->wordLen] = 0;
-    mul2(ecc->wordLen, b);
+    shl(ecc->wordLen, b, b, pp);
     if (ecc->bitLen % 64 == 0) {
-        carry = b[ecc->wordLen] & 1;
+        carry = b[ecc->wordLen] & ((1<<pp)-1);
+        while(carry) {
+            
+            sub(ecc->wordLen+1, b, ecc->p, b);
+            carry = b[ecc->wordLen] & ((1<<pp)-1);
+        }
     }
     else {
-        carry = (b[ ecc->wordLen -1 ] & ((u64)1<<32) );
-    }
-    if (carry) {
-        sub(ecc->wordLen, b, ecc->p, b);
+        carry = b[ ecc->wordLen -1 ] & ((u64)(-1)<<32);
+        while(carry) {
+            sub(ecc->wordLen, b, ecc->p, b);
+            carry = b[ ecc->wordLen -1 ] & ((u64)(-1)<<32);
+        }
     }
 }
 

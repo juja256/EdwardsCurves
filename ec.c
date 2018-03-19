@@ -38,6 +38,7 @@ void BaseEcInit(Ec* ecc,const EcPoint* bp,u64 bitLen, const BigInt n)
             ecc->GFSqr = GFSqr_FIPS384;
             break;
     }
+    ecc->p[ecc->wordLen] = 0;
 
     BigInt two;
     memset(two, 0, ecc->wordLen * 8); two[0] = 2;
