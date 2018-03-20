@@ -276,7 +276,7 @@ void EcEdScalarMul(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B
 int EcWScalarMul(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
 {
     int s = NORMAL_POINT;
-    EcPoint P, H;
+    /*EcPoint P, H;
     copy_point(&P, &uP, ecc->wordLen);
     copy_point(&H, A,  ecc->wordLen);
 
@@ -285,6 +285,30 @@ int EcWScalarMul(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
             s &= EcWAdd(ecc, &P, &H, &P);
         }
         s &= EcWDouble(ecc, &H, &H); 
+    }
+    copy_point(B, &P, ecc->wordLen);
+    return s;*/
+    
+    u32 hb; 
+    for (int i = ecc->bitLen - 1;i >= 0;i--)
+    {
+        if (get_bit(k, i)) 
+        {
+            hb = i;
+            break;
+        }
+    }
+
+    EcPoint P;
+    copy_point(&P, A,  ecc->wordLen);
+    //copy_point(&H, A,  ecc->wordLen);
+    for (int i = hb - 1;i >= 0;i--)
+    {
+        s &= EcWDouble(ecc, &P, &P); 
+        if (get_bit(k, i))
+            s &= EcWAdd(ecc, &P, A, &P);
+        if(!s)
+            printf("%d\n",i);
     }
     copy_point(B, &P, ecc->wordLen);
     return s;
@@ -513,7 +537,7 @@ void EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B
 
 ========================================================================================================
 
-    Weiestrass curves
+    Weierstrass curves
 
     everywhere a = -3
 
