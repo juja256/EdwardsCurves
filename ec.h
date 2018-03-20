@@ -1,6 +1,9 @@
 #ifndef EC_H
 #define EC_H
 
+#define NORMAL_POINT 1
+#define INFINITY_POINT 0
+
 typedef unsigned long long u64;
 typedef unsigned u32;
 typedef unsigned char u8;
@@ -61,14 +64,14 @@ int  EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards);
 void EcGenerateBasePoint(const Ec* ecc, EcPoint* bp);
 int  EcCheckPointOnCurve(const Ec* ecc, const EcPoint* P);
 
-void EcAdd(const Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
-void EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B);
+int EcAdd(const Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
+int EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B);
 
 void EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
 void EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B);
 
 void EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
-void EcScalarMul(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
+int EcScalarMul(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
 
 
 #endif /* EC_H */

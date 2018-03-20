@@ -19,6 +19,8 @@
 
 const u64 unity[] = { 0x1, 0, 0, 0, 0, 0 };
 
+const u64 zero[] = {0, 0, 0, 0, 0, 0};
+
 const EcPoint uP  = { { 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0} };
 
 const u64 p192[]  = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
@@ -721,7 +723,6 @@ void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b) {
     if (ecc->bitLen % 64 == 0) {
         carry = b[ecc->wordLen] & ((1<<pp)-1);
         while(carry) {
-            
             sub(ecc->wordLen+1, b, ecc->p, b);
             carry = b[ecc->wordLen] & ((1<<pp)-1);
         }

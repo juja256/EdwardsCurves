@@ -26,11 +26,11 @@ void test_fips(u64 bit_len, int isEdwards) {
     u64 s, e;
     EcScalarMul(&cur, &(cur.BasePoint), cur.n, &B);
     s = __rdtsc();
-    EcScalarMul(&cur, &(cur.BasePoint), cur.n, &B);
+    r = EcScalarMul(&cur, &(cur.BasePoint), cur.n, &B);
     e = __rdtsc();
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
-    printf("Scalar Mul(Aff.) time: %d\n", e-s);
+    printf("Scalar Mul(Aff.), status: %d, time: %d\n", r, e-s);
     
     EcScalarMulProj(&cur, &(cur.BasePoint), cur.n, &B);
     s = __rdtsc();

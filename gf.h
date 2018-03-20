@@ -9,6 +9,7 @@ extern const u64 p192[3];
 extern const u64 p224[4];
 extern const u64 p256[4];
 extern const u64 p384[6];
+extern const u64 zero[6];
 
 /* Common Arithmetics */
 void tonelli_shanks_sqrt(const Ec* ecc, const GFElement a, GFElement r);
