@@ -477,9 +477,9 @@ void EcEdScalarMulProj(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoin
 int EcWScalarMulProj(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     EcPointProj P, H;
     EcConvertAffineToProjective(ecc, A, &P);
-    copy(P.X,H.X,ecc->wordLen);
-    copy(P.Y,H.Y,ecc->wordLen);
-    copy(P.Z,H.Z,ecc->wordLen);
+    copy(H.X,P.X,ecc->wordLen);
+    copy(H.Y,P.Y,ecc->wordLen);
+    copy(H.Z,P.Z,ecc->wordLen);
 
     int s = NORMAL_POINT;
     

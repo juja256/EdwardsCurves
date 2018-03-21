@@ -67,10 +67,10 @@ int  EcCheckPointOnCurve(const Ec* ecc, const EcPoint* P);
 int EcAdd(const Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
 int EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B);
 
-void EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
-void EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B);
+int EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
+int EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B);
 
-void EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
+int EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
 int EcScalarMul(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
 
 

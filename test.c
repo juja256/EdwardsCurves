@@ -34,11 +34,11 @@ void test_fips(u64 bit_len, int isEdwards) {
     
     EcScalarMulProj(&cur, &(cur.BasePoint), cur.n, &B);
     s = __rdtsc();
-    EcScalarMulProj(&cur, &(cur.BasePoint), cur.n, &B);
+    r = EcScalarMulProj(&cur, &(cur.BasePoint), cur.n, &B);
     e = __rdtsc();
     GFDump(&cur, B.x);
     GFDump(&cur, B.y);
-    printf("Scalar Mul(Proj.) time: %d\n", e-s);
+    printf("Scalar Mul(Proj.), status: %d, time: %d\n",r, e-s);
 
     EcGenerateBasePoint(&cur, &B);
     isOnCurve = EcCheckPointOnCurve(&cur, &B);
