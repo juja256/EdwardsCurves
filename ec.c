@@ -276,18 +276,6 @@ void EcEdScalarMul(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B
 int EcWScalarMul(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
 {
     int s = NORMAL_POINT;
-    /*EcPoint P, H;
-    copy_point(&P, &uP, ecc->wordLen);
-    copy_point(&H, A,  ecc->wordLen);
-
-    for (u32 i=0; i<ecc->bitLen; i++) {
-        if (get_bit(k, i)) {
-            s &= EcWAdd(ecc, &P, &H, &P);
-        }
-        s &= EcWDouble(ecc, &H, &H); 
-    }
-    copy_point(B, &P, ecc->wordLen);
-    return s;*/
     
     u32 hb; 
     for (int i = ecc->bitLen - 1;i >= 0;i--)
@@ -301,14 +289,11 @@ int EcWScalarMul(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
 
     EcPoint P;
     copy_point(&P, A,  ecc->wordLen);
-    //copy_point(&H, A,  ecc->wordLen);
     for (int i = hb - 1;i >= 0;i--)
     {
         s &= EcWDouble(ecc, &P, &P); 
         if (get_bit(k, i))
             s &= EcWAdd(ecc, &P, A, &P);
-        if(!s)
-            printf("%d\n",i);
     }
     copy_point(B, &P, ecc->wordLen);
     return s;
@@ -358,17 +343,19 @@ void EcEdAddProj(const EcEd* ecc, const EcPointProj* A, const EcPointProj* B, Ec
     GFMul(ecc, e2, e3, C->Z);
 }
 
-void EcWAddProj(const EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C)
+int EcWAddProj(const EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C)
 {
-    GFElement u,v,a,tmp,x1z2,sqrv;
-    //u = y2z1 - y1z2
-    GFMul(ecc,B->Y,A->Z,u);
-    GFMul(ecc,B->Z,A->Y,tmp);
-    GFSub(ecc,u,tmp,u);
+    GFElement u,v,a,tmp,x1z2,sqrv,y1z2;
     //v = x2z1 - x1z2
     GFMul(ecc,A->X,B->Z,x1z2); 
     GFMul(ecc,A->Z,B->X,v);
+    if(!GFCmp(ecc,v,x1z2)) //=> z3 = 0, to infinity and beyond
+        return INFINITY_POINT;
     GFSub(ecc,v,x1z2,v);
+    //u = y2z1 - y1z2
+    GFMul(ecc,B->Y,A->Z,u);
+    GFMul(ecc,B->Z,A->Y,y1z2);
+    GFSub(ecc,u,y1z2,u);
     
     GFMul(ecc,A->Z,B->Z,tmp); // tmp = z1*z2
     GFSqr(ecc,v,sqrv); 
@@ -386,17 +373,18 @@ void EcWAddProj(const EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPo
     GFMul(ecc,v,a,C->X);
     //y3 = v^2(u*x1*z2 - v*y1*z2) - u*a 
     GFMul(ecc,u,x1z2,C->Y);
-    GFMul(ecc,A->Y,B->Z,tmp);
-    GFMul(ecc,tmp,v,tmp);
+    //GFMul(ecc,A->Y,B->Z,tmp);
+    GFMul(ecc,y1z2,v,tmp);
     GFSub(ecc,C->Y,tmp,C->Y);
     GFMul(ecc,C->Y,sqrv,C->Y);
     GFMul(ecc,u,a,tmp);
     GFSub(ecc,C->Y,tmp,C->Y);
+    return NORMAL_POINT;
 }
 
-void EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
-    if (ecc->isEdwards) EcEdAddProj(ecc, A, B, C);
-    else EcWAddProj(ecc, A, B, C);
+int EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
+    if (ecc->isEdwards) {EcEdAddProj(ecc, A, B, C); return NORMAL_POINT;}
+    else return EcWAddProj(ecc, A, B, C);
 }
 
 void EcEdDoubleProj(const EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
@@ -424,8 +412,10 @@ void EcEdDoubleProj(const EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
     GFMul(ecc, e2, e3, B->Z);
 }
 
-void EcWDoubleProj(const EcW* ecc, const EcPointProj* A, EcPointProj* B)
+int EcWDoubleProj(const EcW* ecc, const EcPointProj* A, EcPointProj* B)
 {
+    if(!GFCmp(ecc,A->Y,zero))
+        return INFINITY_POINT;
     GFElement h,s,w,b,tmp;
     //w = a*z1^2 + 3*x1^2
     GFSqr(ecc,A->X,tmp); 
@@ -449,25 +439,25 @@ void EcWDoubleProj(const EcW* ecc, const EcPointProj* A, EcPointProj* B)
     GFMul(ecc,h,s,B->X);
     GFMulBy2(ecc,B->X,B->X);
     //y2 = w(4b - h) - 8(y1*s)^2
+    GFMul(ecc,A->Y,s,tmp);
+    GFMulBy2(ecc,tmp,tmp);
+    GFSqr(ecc,tmp,tmp);
+    GFMulBy2(ecc,tmp,tmp); // now tmp = 8*(y1*s)^2
     GFMulBy2(ecc,b,B->Y);
     GFMulBy2(ecc,B->Y,B->Y);
     GFSub(ecc,B->Y,h,B->Y);
     GFMul(ecc,w,B->Y,B->Y);
-    GFMul(ecc,A->Y,s,tmp);
-    GFSqr(ecc,tmp,tmp);
-    GFMulBy2(ecc,tmp,tmp);
-    GFMulBy2(ecc,tmp,tmp);
-    GFMulBy2(ecc,tmp,tmp);
     GFSub(ecc,B->Y,tmp,B->Y);
     //z2 = 8s^3
     GFMulBy2(ecc,s,tmp);
     GFSqr(ecc,tmp,B->Z);
     GFMul(ecc,B->Z,tmp,B->Z);
+    return NORMAL_POINT;
 }
 
-void EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B) {
-    if (ecc->isEdwards) EcEdDoubleProj(ecc, A, B);
-    else EcWDoubleProj(ecc, A, B);
+int EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B) {
+    if (ecc->isEdwards) {EcEdDoubleProj(ecc, A, B); return NORMAL_POINT;}
+    else return EcWDoubleProj(ecc, A, B);
 }
 
 void EcEdScalarMulProj(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
@@ -484,23 +474,38 @@ void EcEdScalarMulProj(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoin
     EcConvertProjectiveToAffine(ecc, &P, B);
 }
 
-void EcWScalarMulProj(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
+int EcWScalarMulProj(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     EcPointProj P, H;
-    EcConvertAffineToProjective(ecc, &uP, &P);
-    EcConvertAffineToProjective(ecc, A, &H);
+    EcConvertAffineToProjective(ecc, A, &P);
+    copy(P.X,H.X,ecc->wordLen);
+    copy(P.Y,H.Y,ecc->wordLen);
+    copy(P.Z,H.Z,ecc->wordLen);
 
-    for (u32 i=0; i<ecc->bitLen; i++) {
-        if (get_bit(k, i)) {
-            EcWAddProj(ecc, &P, &H, &P);
+    int s = NORMAL_POINT;
+    
+    u32 hb; 
+    for (int i = ecc->bitLen - 1;i >= 0;i--)
+    {
+        if (get_bit(k, i)) 
+        {
+            hb = i;
+            break;
         }
-        EcWDoubleProj(ecc, &H, &H); 
+    }
+
+    for (int i = hb - 1;i >= 0;i--)
+    {
+        s &= EcWDoubleProj(ecc, &P, &P); 
+        if (get_bit(k, i))
+            s &= EcWAddProj(ecc, &P, &H, &P);
     }
     EcConvertProjectiveToAffine(ecc, &P, B);
+    return s;
 }
 
-void EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
-    if (ecc->isEdwards) EcEdScalarMulProj(ecc, A, k, B);
-    else EcWScalarMulProj(ecc, A, k, B);
+int EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
+    if (ecc->isEdwards) {EcEdScalarMulProj(ecc, A, k, B); return NORMAL_POINT;}
+    else return EcWScalarMulProj(ecc, A, k, B);
 }
 
 
