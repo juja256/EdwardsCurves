@@ -43,6 +43,7 @@ typedef struct _Ec {
     u64 wordLen;
 
     BigInt n;
+    u64 cofactor;
     EcPoint BasePoint;
 
     BigInt p;
@@ -55,6 +56,9 @@ typedef struct _Ec {
 typedef Ec EcEd;
 typedef Ec EcW;
 
+int  EcPointCmp(const Ec* ecc, const EcPoint* A, const EcPoint* B);
+void EcCopy(const Ec* ecc, EcPoint* dest, const EcPoint* src);
+void EcCopyProj(const Ec* ecc, EcPointProj* dest, const EcPointProj* src);
 
 int  EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d);
 int  EcWInit(EcW* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement a, const GFElement b);
@@ -62,7 +66,13 @@ int  EcWInit(EcW* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFEl
 int  EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards);
 
 void EcGenerateBasePoint(const Ec* ecc, EcPoint* bp);
+
+int  EcCheckPointInMainSubGroup(const Ec* ecc, const EcPoint* P);
 int  EcCheckPointOnCurve(const Ec* ecc, const EcPoint* P);
+
+void EcConvertAffineToProjective(const Ec* ecc, const EcPoint* P, EcPointProj* Q);
+void EcConvertProjectiveToAffine(const Ec* ecc, const EcPointProj* P, EcPoint* Q);
+
 
 int EcAdd(const Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
 int EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B);
@@ -70,7 +80,7 @@ int EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B);
 int EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
 int EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B);
 
-int EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
+int EcScalarMulProj(const Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
 int EcScalarMul(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
 
 

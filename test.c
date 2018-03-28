@@ -6,45 +6,60 @@
 #ifdef _WIN64
 #include <intrin.h>
 #pragma intrinsic(_umul128) 
+#include <windows.h>
 #else
 #include <x86intrin.h>
+#include <time.h>
+double GetTickCount(void) 
+{
+  struct timespec now;
+  if (clock_gettime(CLOCK_MONOTONIC, &now))
+    return 0;
+  return now.tv_sec * 1000.0 + now.tv_nsec / 1000000.0;
+}
 #endif // _WIN64
+
+
 
 void test_fips(u64 bit_len, int isEdwards) {
     Ec cur;
-    EcPoint G, H, A, B, Z;
+    EcPoint G, H, A, Z;
+    EcPointProj B;
     BigInt n, d, p;
-    GFElement e1, e2 ,e3, e4, X;
+    GFElement e3, e4, X;
 
     int r = EcInitStandardCurve(&cur, bit_len, isEdwards);
 
     printf("Init status: %d %d %d\n", r, cur.bitLen, cur.wordLen);
 
-    int isOnCurve = EcCheckPointOnCurve(&cur, &(cur.BasePoint));
-    printf("Base point, on curve: %d\n", isOnCurve);
+    int isOnCurve = EcCheckPointInMainSubGroup(&cur, &(cur.BasePoint));
+    printf("Base point, in main subgroup: %d\n", isOnCurve);
 
-    u64 s, e;
-    EcScalarMul(&cur, &(cur.BasePoint), cur.n, &B);
-    s = __rdtsc();
-    r = EcScalarMul(&cur, &(cur.BasePoint), cur.n, &B);
-    e = __rdtsc();
-    GFDump(&cur, B.x);
-    GFDump(&cur, B.y);
-    printf("Scalar Mul(Aff.), status: %d, time: %d\n", r, e-s);
+    double s1, e1, s2, e2;
+
+    EcScalarMul(&cur, &(cur.BasePoint), cur.n, &Z);
+    s1 = GetTickCount();
+    r = EcScalarMul(&cur, &(cur.BasePoint), cur.n, &Z);
+    e1 = GetTickCount();
+    GFDump(&cur, Z.x);
+    GFDump(&cur, Z.y);
+    printf("Scalar Mul(Aff.), status: %d, time: %lf\n", r, e1-s1);
     
-    EcScalarMulProj(&cur, &(cur.BasePoint), cur.n, &B);
-    s = __rdtsc();
-    r = EcScalarMulProj(&cur, &(cur.BasePoint), cur.n, &B);
-    e = __rdtsc();
-    GFDump(&cur, B.x);
-    GFDump(&cur, B.y);
-    printf("Scalar Mul(Proj.), status: %d, time: %d\n",r, e-s);
+    EcConvertAffineToProjective(&cur, &(cur.BasePoint), &B);
+    s2 = GetTickCount();
+    r = EcScalarMulProj(&cur, &B, cur.n, &B);
+    e2 = GetTickCount();
+    EcConvertProjectiveToAffine(&cur, &B, &G);
+    GFDump(&cur, G.x);
+    GFDump(&cur, G.y);
 
-    EcGenerateBasePoint(&cur, &B);
-    isOnCurve = EcCheckPointOnCurve(&cur, &B);
-    printf("Generated point, on curve: %d\n", isOnCurve);
-    GFDump(&cur, B.x);
-    GFDump(&cur, B.y);
+    printf("Scalar Mul(Proj.), status: %d, time: %lf\n",r, e2-s2);
+
+    EcGenerateBasePoint(&cur, &H);
+    isOnCurve = EcCheckPointInMainSubGroup(&cur, &H);
+    printf("Generated point, in main subgroup: %d\n", isOnCurve);
+    GFDump(&cur, H.x);
+    GFDump(&cur, H.y);
 }
 
 void test_eddsa() {

@@ -5,6 +5,21 @@
 #include <time.h>
 #include <string.h>
 
+int EcPointCmp(const Ec* ecc, const EcPoint* A, const EcPoint* B) {
+    return GFCmp(ecc, A->x, B->x) || GFCmp(ecc, A->y, B->y);
+}
+
+void EcCopy(const Ec* ecc, EcPoint* dest, const EcPoint* src) {
+    copy(dest->x, src->x, ecc->wordLen);
+    copy(dest->y, src->y, ecc->wordLen);
+}
+
+void EcCopyProj(const Ec* ecc, EcPointProj* dest, const EcPointProj* src) {
+    copy(dest->X, src->X, ecc->wordLen);
+    copy(dest->Y, src->Y, ecc->wordLen);
+    copy(dest->Z, src->Z, ecc->wordLen);
+}
+
 void BaseEcInit(Ec* ecc,const EcPoint* bp,u64 bitLen, const BigInt n)
 {
     srand(time(NULL));
@@ -51,6 +66,7 @@ int EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFE
     }
     BaseEcInit(ecc,bp,bitLen,n);
     ecc->isEdwards = 1;
+    ecc->cofactor = 4; // Cofactor = 4 for all full Edwards curves
     copy(ecc->d, d, ecc->wordLen);
     return 0;
 }
@@ -62,6 +78,7 @@ int EcWInit(EcW* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFEle
     }
     BaseEcInit(ecc,bp,bitLen,n);
     ecc->isEdwards = 0;
+    ecc->cofactor = 1; // Cofactor = 1 for all NIST Recommended curves with a = -3
     copy(ecc->a, a, ecc->wordLen);
     copy(ecc->b, b, ecc->wordLen);
     return 0;
@@ -93,6 +110,17 @@ int EcCheckPointOnCurve(const Ec* ecc, const EcPoint* P) {
     else return EcWCheckPointOnCurve(ecc, P);
 }
 
+int EcCheckPointInMainSubGroup(const Ec* ecc, const EcPoint* P) {
+    int r = EcCheckPointOnCurve(ecc, P);
+    if (!r) return 0;
+    EcPoint Q;
+    int s = EcScalarMul(ecc, P, ecc->n, &Q);
+    if ( ecc->isEdwards && (EcPointCmp(ecc, &Q, &uP) == 0) ) return 1;
+    else if ( !(ecc->isEdwards) && (s == 0) ) return 1;
+    return 0;
+}
+
+
 /* x^2 + y^2 = 1 + dx^2y^2 */
 /* y^2 = (1 - x^2)/(1 - dx^2) */
 void EcEdGenerateBasePoint(const EcEd* ecc, EcPoint* bp) {
@@ -122,6 +150,8 @@ void EcEdGenerateBasePoint(const EcEd* ecc, EcPoint* bp) {
     } while(1);
 
     tonelli_shanks_sqrt(ecc, t1, bp->y);
+    EcDouble(ecc, bp, bp);
+    EcDouble(ecc, bp, bp); /* Keeping Point in Main SubGroup by multiplication by factor (x4) */
 }
 
 //y^2 = x^3 + ax + b
@@ -277,15 +307,7 @@ int EcWScalarMul(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
 {
     int s = NORMAL_POINT;
     
-    u32 hb; 
-    for (int i = ecc->bitLen - 1;i >= 0;i--)
-    {
-        if (get_bit(k, i)) 
-        {
-            hb = i;
-            break;
-        }
-    }
+    int hb = bigint_bit_len(ecc->wordLen, k) - 1;
 
     EcPoint P;
     copy_point(&P, A,  ecc->wordLen);
@@ -460,50 +482,41 @@ int EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B) {
     else return EcWDoubleProj(ecc, A, B);
 }
 
-void EcEdScalarMulProj(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
+void EcEdScalarMulProj(const EcEd* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     EcPointProj P, H;
     EcConvertAffineToProjective(ecc, &uP, &P);
-    EcConvertAffineToProjective(ecc, A, &H);
+    
+    EcCopyProj(ecc, &H, A); // H := A
+    EcCopyProj(ecc, B, &P); // B := O
 
     for (u32 i=0; i<ecc->bitLen; i++) {
         if (get_bit(k, i)) {
-            EcEdAddProj(ecc, &P, &H, &P);
+            EcEdAddProj(ecc, B, &H, B);
         }
         EcEdDoubleProj(ecc, &H, &H); 
     }
-    EcConvertProjectiveToAffine(ecc, &P, B);
 }
 
-int EcWScalarMulProj(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
-    EcPointProj P, H;
-    EcConvertAffineToProjective(ecc, A, &P);
-    copy(H.X,P.X,ecc->wordLen);
-    copy(H.Y,P.Y,ecc->wordLen);
-    copy(H.Z,P.Z,ecc->wordLen);
+int EcWScalarMulProj(const EcW* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
+    EcPointProj H;
+    
+    EcCopyProj(ecc, B, A); // B := A
+    EcCopyProj(ecc, &H, A); // H := A
 
     int s = NORMAL_POINT;
     
-    u32 hb; 
-    for (int i = ecc->bitLen - 1;i >= 0;i--)
-    {
-        if (get_bit(k, i)) 
-        {
-            hb = i;
-            break;
-        }
-    }
+    int hb = bigint_bit_len(ecc->wordLen, k) - 1;
 
-    for (int i = hb - 1;i >= 0;i--)
+    for (int i = hb - 1;i >= 0; i--)
     {
-        s &= EcWDoubleProj(ecc, &P, &P); 
+        s &= EcWDoubleProj(ecc, B, B); 
         if (get_bit(k, i))
-            s &= EcWAddProj(ecc, &P, &H, &P);
+            s &= EcWAddProj(ecc, B, &H, B);
     }
-    EcConvertProjectiveToAffine(ecc, &P, B);
     return s;
 }
 
-int EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
+int EcScalarMulProj(const Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     if (ecc->isEdwards) {EcEdScalarMulProj(ecc, A, k, B); return NORMAL_POINT;}
     else return EcWScalarMulProj(ecc, A, k, B);
 }
@@ -542,7 +555,7 @@ int EcScalarMulProj(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
 
 ========================================================================================================
 
-    Weierstrass curves
+    Weierstrass NIST curves
 
     everywhere a = -3
 

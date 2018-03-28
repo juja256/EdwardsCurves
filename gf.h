@@ -30,6 +30,7 @@ void mul(const Ec* ecc, const u64* a, const u64* b, u64* c);
 int word_bit_len(u64 n);
 int bigint_bit_len(u64 nWords, const BigInt a);
 void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res);
+int cmp(u64 n, const BigInt a, const BigInt b);
 
 /* Galois' Fields Arithmetics  */
 void GFInitFromString(GFElement a, const char* str);
