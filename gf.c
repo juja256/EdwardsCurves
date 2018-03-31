@@ -201,7 +201,7 @@ inline int cmp(u64 n, const BigInt a, const BigInt b) {
     return 0;
 }
 
-inline void zero_int(u64 n, BigInt a) {
+void zero_int(u64 n, BigInt a) {
     for (int i=0; i<n; i++) a[i] = 0;
 }
 
@@ -213,9 +213,9 @@ void add_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
 
 void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
     u64 b_len = bigint_bit_len(n, b);
-    u64* mm = malloc(n*8);
-    u64* r = malloc(n*8);
-    zero_int(n+1, r);
+    u64* mm = (u64*)malloc(n*8);
+    u64* r = (u64*)malloc(n*8);
+    zero_int(n, r);
     
     copy(mm, a, n);
     for (int i=0; i<b_len; i++) {
