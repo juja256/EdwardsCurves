@@ -32,6 +32,11 @@ int bigint_bit_len(u64 nWords, const BigInt a);
 void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res);
 int cmp(u64 n, const BigInt a, const BigInt b);
 
+void add_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res);
+void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res);
+void exp_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res);
+void inv_mod(u64 n, const u64* a, const u64* m, u64* res);
+
 /* Galois' Fields Arithmetics  */
 void GFInitFromString(GFElement a, const char* str);
 void GFDump(const Ec* ecc, const GFElement a);

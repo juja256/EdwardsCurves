@@ -58,6 +58,13 @@ void BaseEcInit(Ec* ecc,const EcPoint* bp,u64 bitLen, const BigInt n)
     BigInt two;
     memset(two, 0, ecc->wordLen * 8); two[0] = 2;
     sub(ecc->wordLen, ecc->p, two, ecc->p_min_two);
+
+    BigInt seed;
+    srand(time(NULL));
+    for (u64 i=0; i<ecc->wordLen; i++) {
+        seed[i] = rand() | ((u64)(rand()) << 32);
+    }
+    BBSInit(&(ecc->prng), seed);
 }
 
 int EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d) {

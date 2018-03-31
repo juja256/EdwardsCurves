@@ -30,6 +30,13 @@ typedef void TGFMulFunc(const Ec*, const GFElement, const GFElement, GFElement);
 typedef void TGFSubFunc(const Ec*, const GFElement, const GFElement, GFElement);
 typedef void TGFSqrFunc(const Ec*, const GFElement, GFElement);
 
+typedef struct {
+    u64 state[65];
+} BBS2048_Generator;
+
+int BBSInit(BBS2048_Generator* generator, BigInt seed);
+int BBSGenerateSequence(BBS2048_Generator* generator, u64 bit_len, BigInt dest);
+
 /* Elliptic curve in Edwards:
     x^2 + y^2 = 1 + d*x^2*y^2
    or in Weierstrass form:
@@ -51,6 +58,7 @@ typedef struct _Ec {
     
     TGFMulFunc* GFMul;
     TGFSqrFunc* GFSqr;
+    BBS2048_Generator prng;
 } Ec;
 
 typedef Ec EcEd;

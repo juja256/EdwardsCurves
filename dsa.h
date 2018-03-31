@@ -8,8 +8,12 @@ typedef struct {
     BigInt s;
 } EcSignature;
 
-int DsaGenerateKey(const Ec* ecc, BigInt key, EcPoint* Q);
-int DsaSign(const Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signature);
-int DsaVerify(const Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature* signature);
+#define VER_OK 0
+#define VER_BROKEN_KEY 1
+#define VER_BROKEN_SIGNATURE 2
+
+int EcDsaGenerateKey(Ec* ecc, BigInt key, EcPoint* Q);
+int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signature);
+int EcDsaVerify(const Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature* signature);
 
 #endif /* DSA_H */

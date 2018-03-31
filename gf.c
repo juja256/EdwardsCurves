@@ -201,6 +201,56 @@ inline int cmp(u64 n, const BigInt a, const BigInt b) {
     return 0;
 }
 
+inline void zero_int(u64 n, BigInt a) {
+    for (int i=0; i<n; i++) a[i] = 0;
+}
+
+/* Dummy aryphmetic for ECDSA */
+void add_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
+    add(n+1, a, b, res);
+    if (cmp(n+1, res, m) == 1) sub(n+1, res, m, res);
+}
+
+void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
+    u64 b_len = bigint_bit_len(n, b);
+    u64* mm = malloc(n*8);
+    u64* r = malloc(n*8);
+    zero_int(n+1, r);
+    
+    copy(mm, a, n);
+    for (int i=0; i<b_len; i++) {
+        if (get_bit(b, i)) add_mod(n, r, mm, m, r);
+        add_mod(n, mm, mm, m, mm);
+    }
+    copy(res, r, n);
+    free(mm);
+    free(r);
+}
+
+void exp_mod(u64 n, const u64* a, const u64* p, const u64* m, u64* res) {
+    u64 b_len = bigint_bit_len(n, p);
+    u64* mm = malloc(n*8);
+    u64* r = malloc(n*8);
+    zero_int(n+1, r);
+    
+    copy(mm, a, n);
+    for (int i=0; i<b_len; i++) {
+        if (get_bit(p, i)) mul_mod(n, r, mm, m, r);
+        mul_mod(n, mm, mm, m, mm);
+    }
+    copy(res, r, n);
+    free(mm);
+    free(r);
+}
+
+void inv_mod(u64 n, const u64* a, const u64* m, u64* res) {
+    u64* mm = malloc(n*8);
+    copy(mm, m, n);
+    mm[0] -= 2; 
+    exp_mod(n, a, mm, m, res);
+    free(mm);
+}
+
 void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res) {
     BigInt tmp;
     BigInt m;
