@@ -213,8 +213,6 @@ void add_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
 
 void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
     u64 b_len = bigint_bit_len(n, b);
-    //u64* mm = (u64*)malloc(2*n*8);
-    //u64* r = (u64*)malloc(2*n*8);
     BigInt mm, r;
     zero_int(n, r);
     
@@ -224,14 +222,10 @@ void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
         add_mod(n, mm, mm, m, mm);
     }
     copy(res, r, n);
-    //free(mm);
-    //free(r);
 }
 
 void exp_mod(u64 n, const u64* a, const u64* p, const u64* m, u64* res) {
     u64 b_len = bigint_bit_len(n, p);
-    //u64* mm = malloc(2*n*8);
-    //u64* r = malloc(2*n*8);
     BigInt mm, r;
     zero_int(n+1, r);
     r[0] = 1;
@@ -241,17 +235,13 @@ void exp_mod(u64 n, const u64* a, const u64* p, const u64* m, u64* res) {
         mul_mod(n, mm, mm, m, mm);
     }
     copy(res, r, n);
-    //free(mm);
-    //free(r);
 }
 
 void inv_mod(u64 n, const u64* a, const u64* m, u64* res) {
-    //u64* mm = malloc(n*8);
     BigInt mm;
     copy(mm, m, n);
     mm[0] -= 2; 
     exp_mod(n, a, mm, m, res);
-    //free(mm);
 }
 
 void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res) {

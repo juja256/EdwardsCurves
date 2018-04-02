@@ -28,10 +28,10 @@ void test_fips(u64 bit_len, int isEdwards) {
     EcPointProj B;
     BigInt n, d, p;
     GFElement e3, e4, X;
-
+    char name[60];
     int r = EcInitStandardCurve(&cur, bit_len, isEdwards);
-
-    printf("Init status: %d %d %d\n", r, cur.bitLen, cur.wordLen);
+    EcDump(&cur, name);
+    printf("--- %s ---\n", name);
 
     int isOnCurve = EcCheckPointInMainSubGroup(&cur, &(cur.BasePoint));
     printf("Base point, in main subgroup: %d\n", isOnCurve);
@@ -64,57 +64,57 @@ void test_fips(u64 bit_len, int isEdwards) {
 }
 
 void test_eddsa(u64 bit_len, int isEdwards) {
+    double s1, e1, s2, e2;
     Ec cur;
     char name[60];
     
     EcInitStandardCurve(&cur, bit_len, isEdwards);
     EcDump(&cur, name);
-    printf("%s\n", name);
+    printf("--- %s ---\n", name);
 
     EcSignature sig;
     BigInt hash, key;
     EcPoint Q;
     memset(hash, 0, 7*8);
     strcpy((char*)hash, "Gopher" );
+    s1 = GetTickCount();
     EcDsaGenerateKey(&cur, key, &Q);
+    e1 = GetTickCount();
     EcDsaSign(&cur, key, hash, &sig);
+    s2 = GetTickCount();
+    int s = EcDsaVerify(&cur, &Q, hash, &sig);
+    e2 = GetTickCount();
+    printf("Generated ECDSA keypair (key, Q), time: %lf\n", e1-s1);
+    GFDump(&cur, key);
+    GFDump(&cur, Q.x);
+    GFDump(&cur, Q.y);
+    printf("Digital signature for hash: %s, time: %lf\n", (char*)hash, s2-e1);
     GFDump(&cur, sig.r);
     GFDump(&cur, sig.s);
-    int s = EcDsaVerify(&cur, &Q, hash, &sig);
-    printf("Signature Verification status: %d\n", s);
+    printf("Signature Verification status: %d, time: %lf\n", s, e2-s2);
 }
 
 int main() {
 
-	/*printf("------- Testing P-192 (Edwards) -------\n");
-    test_fips(192, 1);
-    printf("------- Testing P-192 (Weierstrass) -------\n");
+	printf("------- Testing EC Arithmetic -------\n");
     test_fips(192, 0);
-
-    printf("------- Testing P-224 (Edwards) -------\n");
-    test_fips(224, 1);
-    printf("------- Testing P-224 (Weierstrass) -------\n");
+    test_fips(192, 1);
     test_fips(224, 0);
-
-    printf("------- Testing P-256 (Edwards) -------\n");
-    test_fips(256, 1);
-    printf("------- Testing P-256 (Weierstrass) -------\n");
+    test_fips(224, 1);
     test_fips(256, 0);
-
-	printf("------- Testing P-384 (Edwards) -------\n");
-	test_fips(384, 1);
-    printf("------- Testing P-384 (Weierstrass) -------\n");
-	test_fips(384, 0);*/
+    test_fips(256, 1);
+    test_fips(384, 0);
+    test_fips(384, 1);
 
     printf("------- Testing ECDSA -------\n");
-    test_eddsa(192, 1);
     test_eddsa(192, 0);
-    //test_eddsa(224, 1);
-    //test_eddsa(224, 0);
-    test_eddsa(256, 1);
+    test_eddsa(192, 1);
+    test_eddsa(224, 0);
+    test_eddsa(224, 1);
     test_eddsa(256, 0);
-    test_eddsa(384, 1);
+    test_eddsa(256, 1);
     test_eddsa(384, 0);
+    test_eddsa(384, 1);
     #ifdef _WIN64
     system("pause");
     #endif
