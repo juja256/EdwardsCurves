@@ -1,10 +1,10 @@
 GXX:= gcc
-CFLAGS:= -no-pie -g
+CFLAGS:= -no-pie -O
 
 all: test
 
-test: test.o ec.o gf.o dsa.o
-	$(GXX) $(CFLAGS) test.o ec.o gf.o dsa.o -o test
+test: test.o ec.o gf.o dsa.o ecdh.o
+	$(GXX) $(CFLAGS) test.o ec.o gf.o dsa.o ecdh.o -o test
 
 test.o: test.c
 	$(GXX) $(CFLAGS) -c test.c
@@ -17,6 +17,9 @@ gf.o: gf.c
 
 dsa.o: dsa.c 
 	$(GXX) $(CFLAGS) -c dsa.c
+
+ecdh.o: ecdh.c 
+	$(GXX) $(CFLAGS) -c ecdh.c
 
 clear:
 	rm -f *.o

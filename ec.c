@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <stdio.h>
 
 int EcPointCmp(const Ec* ecc, const EcPoint* A, const EcPoint* B) {
     return GFCmp(ecc, A->x, B->x) || GFCmp(ecc, A->y, B->y);
@@ -60,12 +61,10 @@ void BaseEcInit(Ec* ecc,const EcPoint* bp,u64 bitLen, const BigInt n)
     memset(two, 0, ecc->wordLen * 8); two[0] = 2;
     sub(ecc->wordLen, ecc->p, two, ecc->p_min_two);
 
-    BigInt seed;
+    unsigned char seed[4];
     srand(time(NULL));
-    for (u64 i=0; i<ecc->wordLen; i++) {
-        seed[i] = rand() | ((u64)(rand()) << 32);
-    }
-    BBSInit(&(ecc->prng), seed);
+    seed[0] = rand();
+    PRNGInit(&(ecc->prng), seed, 4);
 }
 
 int EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d) {
@@ -680,4 +679,11 @@ int EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards) {
         }
         return EcWInit(ecc, &G, bitLen, n, a, b);
     }
+}
+
+void EcDump(const Ec* ecc, char* buf) {
+    char e[60];
+    if (ecc->isEdwards) strcpy(e, "Edwards"); else strcpy(e, "Weierstrass");
+
+    int l = sprintf(buf, "P-%d(%s)", ecc->bitLen, e);
 }

@@ -65,7 +65,11 @@ void test_fips(u64 bit_len, int isEdwards) {
 
 void test_eddsa(u64 bit_len, int isEdwards) {
     Ec cur;
+    char name[60];
+    
     EcInitStandardCurve(&cur, bit_len, isEdwards);
+    EcDump(&cur, name);
+    printf("%s\n", name);
 
     EcSignature sig;
     BigInt hash, key;
@@ -77,7 +81,7 @@ void test_eddsa(u64 bit_len, int isEdwards) {
     GFDump(&cur, sig.r);
     GFDump(&cur, sig.s);
     int s = EcDsaVerify(&cur, &Q, hash, &sig);
-    printf("Signature Verification status: %d", s);
+    printf("Signature Verification status: %d\n", s);
 }
 
 int main() {
@@ -104,6 +108,13 @@ int main() {
 
     printf("------- Testing ECDSA -------\n");
     test_eddsa(192, 1);
+    test_eddsa(192, 0);
+    //test_eddsa(224, 1);
+    //test_eddsa(224, 0);
+    test_eddsa(256, 1);
+    test_eddsa(256, 0);
+    test_eddsa(384, 1);
+    test_eddsa(384, 0);
     #ifdef _WIN64
     system("pause");
     #endif

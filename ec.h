@@ -30,12 +30,14 @@ typedef void TGFMulFunc(const Ec*, const GFElement, const GFElement, GFElement);
 typedef void TGFSubFunc(const Ec*, const GFElement, const GFElement, GFElement);
 typedef void TGFSqrFunc(const Ec*, const GFElement, GFElement);
 
+#define PRNG_STATE_LEN 256 
 typedef struct {
-    u64 state[65];
-} BBS2048_Generator;
+    unsigned char state[PRNG_STATE_LEN];
+} PRNG;;
 
-int BBSInit(BBS2048_Generator* generator, BigInt seed);
-int BBSGenerateSequence(BBS2048_Generator* generator, u64 bit_len, BigInt dest);
+void PRNGInit(PRNG* generator, unsigned char* seed, int len);
+void PRNGRun(PRNG* generator); 
+void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest);
 
 /* Elliptic curve in Edwards:
     x^2 + y^2 = 1 + d*x^2*y^2
@@ -58,15 +60,12 @@ typedef struct _Ec {
     
     TGFMulFunc* GFMul;
     TGFSqrFunc* GFSqr;
-    BBS2048_Generator prng;
+    PRNG prng;
 } Ec;
 
 typedef Ec EcEd;
 typedef Ec EcW;
 
-int  EcPointCmp(const Ec* ecc, const EcPoint* A, const EcPoint* B);
-void EcCopy(const Ec* ecc, EcPoint* dest, const EcPoint* src);
-void EcCopyProj(const Ec* ecc, EcPointProj* dest, const EcPointProj* src);
 
 int  EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d);
 int  EcWInit(EcW* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement a, const GFElement b);
@@ -78,9 +77,15 @@ void EcGenerateBasePoint(const Ec* ecc, EcPoint* bp);
 int  EcCheckPointInMainSubGroup(const Ec* ecc, const EcPoint* P);
 int  EcCheckPointOnCurve(const Ec* ecc, const EcPoint* P);
 
+void EcDump(const Ec* ecc, char* buf);
+
+/* Arithmetic on Elliptic Curves */
+int  EcPointCmp(const Ec* ecc, const EcPoint* A, const EcPoint* B);
+void EcCopy(const Ec* ecc, EcPoint* dest, const EcPoint* src);
+void EcCopyProj(const Ec* ecc, EcPointProj* dest, const EcPointProj* src);
+
 void EcConvertAffineToProjective(const Ec* ecc, const EcPoint* P, EcPointProj* Q);
 void EcConvertProjectiveToAffine(const Ec* ecc, const EcPointProj* P, EcPoint* Q);
-
 
 int EcAdd(const Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
 int EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B);

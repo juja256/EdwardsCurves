@@ -44,17 +44,21 @@ static const u64 M[] = {
 0x82780cc55bae0479
  };
 
-int BBSInit(BBS2048_Generator* generator, BigInt seed) {
-    copy( generator->state, seed, 2048/64 );
-    //mul_mod(32, generator->state, generator->state, M, generator->state);
+void PRNGInit(PRNG* generator, unsigned char* seed, int seed_len) {
+    memcpy( generator->state, seed, seed_len );
+    PRNGRun(generator);
 }
 
-int BBSGenerateSequence(BBS2048_Generator* generator, u64 bit_len, BigInt dest) {
+void PRNGRun(PRNG* generator) {
+    generator->state[0] ^= rand();
+}
+
+void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest) {
     int w = (bit_len % 64 == 0) ? bit_len/64 : bit_len/64+1; 
     memset(dest, 0, w);
     for (int i=0; i<bit_len; i++) {
-        //mul_mod(32, generator->state, generator->state, M, generator->state);
-        dest[i/64] ^= (u64)rand() ^ ((u64)rand() << 32); // ( generator->state[0] & 1 ) << (i%64);
+        PRNGRun(generator);
+        dest[i/64] ^= ( generator->state[0] & 1 ) << (i%64);
     }
 }
 
@@ -62,7 +66,7 @@ int EcDsaGenerateKey(Ec* ecc, BigInt key, EcPoint* Q) {
     BigInt seed;
     EcPointProj Q_p;
 
-    BBSGenerateSequence( &(ecc->prng), ecc->bitLen, key );
+    PRNGGenerateSequence( &(ecc->prng), ecc->bitLen, (unsigned char*)key );
 
     if (GFCmp(ecc, key, ecc->n) == 1) {
         GFSub(ecc, key, ecc->n, key);
@@ -80,7 +84,7 @@ int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signatu
     EcPointProj Q_p;
     
     gen_k:
-    BBSGenerateSequence( &ecc->prng, ecc->bitLen, k ); // generate k
+    PRNGGenerateSequence( &ecc->prng, ecc->bitLen, (unsigned char*)k ); // generate k
 
     while (GFCmp(ecc, k, ecc->n) != -1) {
         GFSub(ecc, k, ecc->n, k);
@@ -133,9 +137,6 @@ int EcDsaVerify(const Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSign
         GFSub(ecc, v, ecc->n, v);
     } // v = P.x mod n
 
-    //printf("v, r:\n");
-    //GFDump(ecc, v);
-    //GFDump(ecc, signature->r);
     /* v =? r */
     if ( GFCmp( ecc, v, signature->r ) != 0 ) return VER_BROKEN_SIGNATURE;
     return VER_OK;

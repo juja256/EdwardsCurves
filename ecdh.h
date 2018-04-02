@@ -3,7 +3,7 @@
 
 #include "ec.h"
 
-int EdDhStartKeyNegotiation(EcEd* ecc, EcPoint* Q_B, BigInt d_A, EcPoint* P_enc);
-int EdDhObtainSecretPoint(EcEd* ecc, BigInt d_A, EcPoint* P_enc, EcPoint* P_secret);
+int EcDhStartKeyNegotiation(Ec* ecc, EcPoint* Q_B, BigInt d_A, EcPoint* P_enc);
+int EcDhEndKeyNegotiation(Ec* ecc, BigInt d_A, EcPoint* P_enc, EcPoint* P_secret);
 
 #endif /* EDDH_H */

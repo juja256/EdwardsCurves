@@ -1,13 +1,25 @@
 #include "ecdh.h"
+#include "ec.h"
 
-#define SUCCESS 0
+#define DH_SUCCESS 0
+#define DH_FAIL -1
 
-int EdDhStartKeyNegotiation(EcEd* ecc, EcPoint* Q_B, BigInt d_A, EcPoint* P_enc) {
-    EcEdScalarMul(ecc, Q_B, d_A, P_enc);
-    return SUCCESS;
+
+int EcDhStartKeyNegotiation(Ec* ecc, EcPoint* Q_B, BigInt d_A, EcPoint* P_enc) {
+    if (!EcCheckPointInMainSubGroup(ecc, Q_B)) return DH_FAIL;
+    EcPointProj P_p;
+    EcConvertAffineToProjective(ecc, Q_B, &P_p);
+    EcScalarMulProj(ecc, &P_p, d_A, &P_p);
+    EcConvertProjectiveToAffine(ecc, &P_p, P_enc);
+    return DH_SUCCESS;
+
 }
 
-int EdDhObtainSecretPoint(EcEd* ecc, BigInt d_A, EcPoint* P_enc, EcPoint* P_secret) {
-    EcEdScalarMul(ecc, P_enc, d_A, P_secret);
-    return SUCCESS;
+int EcDhEndKeyNegotiation(Ec* ecc, BigInt d_A, EcPoint* P_enc, EcPoint* P_secret) {
+    if (!EcCheckPointInMainSubGroup(ecc, P_enc)) return DH_FAIL;
+    EcPointProj P_p;
+    EcConvertAffineToProjective(ecc, P_enc, &P_p);
+    EcScalarMulProj(ecc, &P_p, d_A, &P_p);
+    EcConvertProjectiveToAffine(ecc, &P_p, P_secret);
+    return DH_SUCCESS;
 }
