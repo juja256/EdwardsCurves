@@ -128,7 +128,7 @@ inline int bigint_bit_len(u64 nWords, const BigInt a) {
     int i=nWords-1;
     do {
         bit_len-=64;
-    } while (a[i--] == 0);
+    } while ((i>=0) && (a[i--] == 0));
 
     bit_len += word_bit_len(a[i+1]);
     return bit_len;
@@ -207,14 +207,15 @@ void zero_int(u64 n, BigInt a) {
 
 /* Dummy aryphmetic for ECDSA */
 void add_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
-    add(n+1, a, b, res);
+    res[n] = add(n, a, b, res);
     if (cmp(n+1, res, m) == 1) sub(n+1, res, m, res);
 }
 
 void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
     u64 b_len = bigint_bit_len(n, b);
-    u64* mm = (u64*)malloc(n*8);
-    u64* r = (u64*)malloc(n*8);
+    //u64* mm = (u64*)malloc(2*n*8);
+    //u64* r = (u64*)malloc(2*n*8);
+    BigInt mm, r;
     zero_int(n, r);
     
     copy(mm, a, n);
@@ -223,32 +224,34 @@ void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
         add_mod(n, mm, mm, m, mm);
     }
     copy(res, r, n);
-    free(mm);
-    free(r);
+    //free(mm);
+    //free(r);
 }
 
 void exp_mod(u64 n, const u64* a, const u64* p, const u64* m, u64* res) {
     u64 b_len = bigint_bit_len(n, p);
-    u64* mm = malloc(n*8);
-    u64* r = malloc(n*8);
+    //u64* mm = malloc(2*n*8);
+    //u64* r = malloc(2*n*8);
+    BigInt mm, r;
     zero_int(n+1, r);
-    
+    r[0] = 1;
     copy(mm, a, n);
     for (int i=0; i<b_len; i++) {
         if (get_bit(p, i)) mul_mod(n, r, mm, m, r);
         mul_mod(n, mm, mm, m, mm);
     }
     copy(res, r, n);
-    free(mm);
-    free(r);
+    //free(mm);
+    //free(r);
 }
 
 void inv_mod(u64 n, const u64* a, const u64* m, u64* res) {
-    u64* mm = malloc(n*8);
+    //u64* mm = malloc(n*8);
+    BigInt mm;
     copy(mm, m, n);
     mm[0] -= 2; 
     exp_mod(n, a, mm, m, res);
-    free(mm);
+    //free(mm);
 }
 
 void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res) {

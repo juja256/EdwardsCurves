@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <stdio.h>
 
 /* Magic 2048bit Number M=pq:
 0x82780CC55BAE0479B0F478FE1F648D21180C71EF09655F1103F21B98765A4A926034967321666C59056461D85616746BAF309D393692C7EBCE285DCC5F865868E0C9F2048DFD87240229B039BAA07BE52FCBBFF95DF7E8BD2189A00B3D4832510D15BE80354A6560CED52426F7404EBCC3285392E894037FB02B01B19E47CDAA2DD029EC78A56963EDF8A6EA9E670F964E96C3ED6912DB8EBDCDC8E959F36ECF37CD464B9153D2FDD2EAA12E5982B0A33B448F290FA31868FE48BFF5339C9AC8697A2C040AF823922AD9EB9807E45912EBDDD15BB5AD3AB04C21C8774E41D42486ABFDC7EECC392FE0629372B63A4334AA23A2F721F7AF131201E43B9CE2C787 
@@ -45,16 +46,15 @@ static const u64 M[] = {
 
 int BBSInit(BBS2048_Generator* generator, BigInt seed) {
     copy( generator->state, seed, 2048/64 );
-    mul_mod(32, generator->state, generator->state, M, generator->state);
+    //mul_mod(32, generator->state, generator->state, M, generator->state);
 }
 
 int BBSGenerateSequence(BBS2048_Generator* generator, u64 bit_len, BigInt dest) {
     int w = (bit_len % 64 == 0) ? bit_len/64 : bit_len/64+1; 
-
     memset(dest, 0, w);
     for (int i=0; i<bit_len; i++) {
-        mul_mod(32, generator->state, generator->state, M, generator->state);
-        dest[i/64] ^= ( generator->state[0] & 1 ) << (i%64);
+        //mul_mod(32, generator->state, generator->state, M, generator->state);
+        dest[i/64] ^= (u64)rand() ^ ((u64)rand() << 32); // ( generator->state[0] & 1 ) << (i%64);
     }
 }
 
@@ -82,7 +82,7 @@ int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signatu
     gen_k:
     BBSGenerateSequence( &ecc->prng, ecc->bitLen, k ); // generate k
 
-    if (GFCmp(ecc, k, ecc->n) == 1) {
+    while (GFCmp(ecc, k, ecc->n) != -1) {
         GFSub(ecc, k, ecc->n, k);
     }
 
@@ -90,16 +90,16 @@ int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signatu
     EcScalarMulProj(ecc, &Q_p, k, &Q_p); // (x1, y1) = k*P
     EcConvertProjectiveToAffine(ecc, &Q_p, &P);
 
-    if (GFCmp(ecc, P.x, ecc->n) == 1) {
-        GFSub(ecc, k, ecc->n, signature->r);
-    }
-    else if (GFCmp(ecc, P.x, zero) == 0) {
+    if (GFCmp(ecc, P.x, zero) == 0) {
         goto gen_k; 
     }
-    else {
-        copy(signature->r, P.x, ecc->wordLen);
-    } // r = x1 mod n
 
+    copy(signature->r, P.x, ecc->wordLen);
+    
+    while (GFCmp(ecc, signature->r, ecc->n) != -1) {
+        GFSub(ecc, signature->r, ecc->n, signature->r);
+    } // r = x1 mod n
+    
     /* s = k_inv*(hash + key*r) mod n */
     mul_mod( ecc->wordLen, key, signature->r, ecc->n, signature->s );
     add_mod( ecc->wordLen, hash, signature->s, ecc->n, signature->s);
@@ -128,13 +128,14 @@ int EcDsaVerify(const Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSign
     EcAddProj(ecc, &P_p, &Q_p, &P_p); // P = u1*G + u2*Q
     EcConvertProjectiveToAffine(ecc, &P_p, &P);
 
-    if (GFCmp(ecc, P.x, ecc->n) == 1) {
-        GFSub(ecc, P.x, ecc->n, v);
-    }
-    else {
-        copy(v, P.x, ecc->wordLen);
+    copy(v, P.x, ecc->wordLen);
+    while (GFCmp(ecc, v, ecc->n) != -1) {
+        GFSub(ecc, v, ecc->n, v);
     } // v = P.x mod n
 
+    //printf("v, r:\n");
+    //GFDump(ecc, v);
+    //GFDump(ecc, signature->r);
     /* v =? r */
     if ( GFCmp( ecc, v, signature->r ) != 0 ) return VER_BROKEN_SIGNATURE;
     return VER_OK;

@@ -26,6 +26,7 @@ void BaseEcInit(Ec* ecc,const EcPoint* bp,u64 bitLen, const BigInt n)
     ecc->bitLen = bitLen;
     ecc->wordLen = (bitLen%64 == 0) ? (bitLen / 64) : (bitLen / 64) + 1;
     copy(ecc->n, n, ecc->wordLen);
+    ecc->n[ecc->wordLen] = 0;
     copy(ecc->BasePoint.x, bp->x, ecc->wordLen);
     copy(ecc->BasePoint.y, bp->y, ecc->wordLen);
 
