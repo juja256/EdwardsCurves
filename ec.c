@@ -121,7 +121,10 @@ int EcCheckPointInMainSubGroup(const Ec* ecc, const EcPoint* P) {
     int r = EcCheckPointOnCurve(ecc, P);
     if (!r) return 0;
     EcPoint Q;
-    int s = EcScalarMul(ecc, P, ecc->n, &Q);
+    EcPointProj P_p;
+    EcConvertAffineToProjective(ecc, P, &P_p);
+    int s = EcScalarMulProj(ecc, &P_p, ecc->n, &P_p);
+    EcConvertProjectiveToAffine(ecc, &P_p, &Q);
     if ( ecc->isEdwards && (EcPointCmp(ecc, &Q, &uP) == 0) ) return 1;
     else if ( !(ecc->isEdwards) && (s == 0) ) return 1;
     return 0;

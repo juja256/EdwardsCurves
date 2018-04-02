@@ -88,7 +88,7 @@ void test_eddsa(u64 bit_len, int isEdwards) {
     GFDump(&cur, key);
     GFDump(&cur, Q.x);
     GFDump(&cur, Q.y);
-    printf("Digital signature for hash: %s, time: %lf\n", (char*)hash, s2-e1);
+    printf("Digital signature (r, s) for hash: %s, time: %lf\n", (char*)hash, s2-e1);
     GFDump(&cur, sig.r);
     GFDump(&cur, sig.s);
     printf("Signature Verification status: %d, time: %lf\n", s, e2-s2);
