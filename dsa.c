@@ -54,8 +54,8 @@ void PRNGRun(PRNG* generator) {
 }
 
 void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest) {
-    int w = (bit_len % 8 == 0) ? bit_len/8 : bit_len/8+1; 
-    memset(dest, 0, w);
+    int w = (bit_len % 64 == 0) ? bit_len/64 : bit_len/64+1; 
+    memset(dest, 0, w*8);
     for (int i=0; i<bit_len; i++) {
         PRNGRun(generator);
         dest[i/8] ^= ( generator->state[0] & 1 ) << (i%8);

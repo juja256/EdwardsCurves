@@ -24,8 +24,8 @@ double GetTickCount(void)
 
 void test_fips(u64 bit_len, int isEdwards) {
     Ec cur;
-    EcPoint G, H, A, Z;
-    EcPointProj B;
+    EcPoint G, H, Z;
+    EcPointProj B, A;
     BigInt n, d, p;
     GFElement e3, e4, X;
     char name[60];
@@ -48,13 +48,17 @@ void test_fips(u64 bit_len, int isEdwards) {
     
     EcConvertAffineToProjective(&cur, &(cur.BasePoint), &B);
     s2 = GetTickCount();
-    r = EcScalarMulProj(&cur, &B, cur.n, &B);
+    for (int i=0;i<10;i++)
+        EcScalarMulProj(&cur, &B, cur.n, &A);
     e2 = GetTickCount();
+
+    r = EcScalarMulProj(&cur, &B, cur.n, &B);
+    
     EcConvertProjectiveToAffine(&cur, &B, &G);
     GFDump(&cur, G.x);
     GFDump(&cur, G.y);
 
-    printf("Scalar Mul(Proj.), status: %d, time: %lf\n",r, e2-s2);
+    printf("Scalar Mul(Proj.), status: %d, time: %lf\n",r, (e2-s2)/10);
 
     EcGenerateBasePoint(&cur, &H);
     isOnCurve = EcCheckPointInMainSubGroup(&cur, &H);
