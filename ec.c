@@ -6,56 +6,57 @@
 #include <string.h>
 #include <stdio.h>
 
-int EcPointCmp(const Ec* ecc, const EcPoint* A, const EcPoint* B) {
+int EcPointCmp(Ec* ecc, const EcPoint* A, const EcPoint* B) {
     return GFCmp(ecc, A->x, B->x) || GFCmp(ecc, A->y, B->y);
 }
 
-void EcCopy(const Ec* ecc, EcPoint* dest, const EcPoint* src) {
+void EcCopy(Ec* ecc, EcPoint* dest, const EcPoint* src) {
     copy(dest->x, src->x, ecc->wordLen);
     copy(dest->y, src->y, ecc->wordLen);
 }
 
-void EcCopyProj(const Ec* ecc, EcPointProj* dest, const EcPointProj* src) {
+void EcCopyProj(Ec* ecc, EcPointProj* dest, const EcPointProj* src) {
     copy(dest->X, src->X, ecc->wordLen);
     copy(dest->Y, src->Y, ecc->wordLen);
     copy(dest->Z, src->Z, ecc->wordLen);
 }
 
-void BaseEcInit(Ec* ecc,const EcPoint* bp,u64 bitLen, const BigInt n)
+void BaseEcInit(Ec* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n)
 {
     srand(time(NULL));
     ecc->bitLen = bitLen;
     ecc->wordLen = (bitLen%64 == 0) ? (bitLen / 64) : (bitLen / 64) + 1;
+    memset(ecc->p, 0, sizeof(BigInt));
+    memset(ecc->n, 0, sizeof(BigInt));
     copy(ecc->n, n, ecc->wordLen);
-    ecc->n[ecc->wordLen] = 0;
     copy(ecc->BasePoint.x, bp->x, ecc->wordLen);
     copy(ecc->BasePoint.y, bp->y, ecc->wordLen);
 
-    switch (bitLen) {
-        case 192:
-            copy(ecc->p, p192, ecc->wordLen);
-            ecc->GFMul = GFMul_FIPS192;
-            ecc->GFSqr = GFSqr_FIPS192;
-            break;
-        case 224:
-            copy(ecc->p, p224, ecc->wordLen);
-            ecc->GFMul = GFMul_FIPS224;
-            ecc->GFSqr = GFSqr_FIPS224;
-            break;
+    ecc->GFMul = GFMul_Cmn;
+    ecc->GFSqr = GFSqr_Cmn;
 
-        case 256:
-            copy(ecc->p, p256, ecc->wordLen);
-            ecc->GFMul = GFMul_FIPS256;
-            ecc->GFSqr = GFSqr_FIPS256;
-            break;
+    copy(ecc->p, p, ecc->wordLen);
 
-        case 384: 
-            copy(ecc->p, p384, ecc->wordLen);
-            ecc->GFMul = GFMul_FIPS384;
-            ecc->GFSqr = GFSqr_FIPS384;
-            break;
+    if (GFCmp(ecc, ecc->p, p192) == 0) {
+        ecc->GFMul = GFMul_FIPS192;
+        ecc->GFSqr = GFSqr_FIPS192;
     }
-    ecc->p[ecc->wordLen] = 0;
+    else if (GFCmp(ecc, ecc->p, p224) == 0) {
+        ecc->GFMul = GFMul_FIPS224;
+        ecc->GFSqr = GFSqr_FIPS224;
+    }
+    else if (GFCmp(ecc, ecc->p, p256) == 0) {
+        ecc->GFMul = GFMul_FIPS256;
+        ecc->GFSqr = GFSqr_FIPS256;
+    }
+    else if (GFCmp(ecc, ecc->p, p384) == 0) {
+        ecc->GFMul = GFMul_FIPS384;
+        ecc->GFSqr = GFSqr_FIPS384;
+    }
+    else if (GFCmp(ecc, ecc->p, p521) == 0) {
+        ecc->GFMul = GFMul_FIPS521;
+        ecc->GFSqr = GFSqr_FIPS521;
+    }
 
     BigInt two;
     memset(two, 0, ecc->wordLen * 8); two[0] = 2;
@@ -67,23 +68,16 @@ void BaseEcInit(Ec* ecc,const EcPoint* bp,u64 bitLen, const BigInt n)
     PRNGInit(&(ecc->prng), seed, 4);
 }
 
-int EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d) {
-    if ( (bitLen != 192) && (bitLen != 224) && (bitLen != 256) && (bitLen != 384)) {
-        return -1;
-    }
-    BaseEcInit(ecc,bp,bitLen,n);
+int EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement d) {
+    BaseEcInit(ecc, bitLen, p, bp, n);
     ecc->isEdwards = 1;
     ecc->cofactor = 4; // Cofactor = 4 for all full Edwards curves
     copy(ecc->d, d, ecc->wordLen);
     return 0;
 }
 
-int EcWInit(EcW* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement a,const GFElement b)
-{   
-    if ( (bitLen != 192) && (bitLen != 224) && (bitLen != 256) && (bitLen != 384)) {
-        return -1;
-    }
-    BaseEcInit(ecc,bp,bitLen,n);
+int EcWInit(EcW* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement a, const GFElement b) {   
+    BaseEcInit(ecc, bitLen, p, bp, n);
     ecc->isEdwards = 0;
     ecc->cofactor = 1; // Cofactor = 1 for all NIST Recommended curves with a = -3
     copy(ecc->a, a, ecc->wordLen);
@@ -91,7 +85,7 @@ int EcWInit(EcW* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFEle
     return 0;
 }
 
-int EcEdCheckPointOnCurve(const EcEd* ecc, const EcPoint* P) {
+int EcEdCheckPointOnCurve(EcEd* ecc, const EcPoint* P) {
     GFElement x,y,z;
     GFSqr(ecc, P->x, x);
     GFSqr(ecc, P->y, y);
@@ -102,7 +96,7 @@ int EcEdCheckPointOnCurve(const EcEd* ecc, const EcPoint* P) {
     return !GFCmp(ecc, x, z); //1 - ok
 }
 
-int EcWCheckPointOnCurve(const EcW* ecc, const EcPoint* P) {
+int EcWCheckPointOnCurve(EcW* ecc, const EcPoint* P) {
     GFElement l,r; //left,right
     GFSqr(ecc, P->y, l);
     GFSqr(ecc, P->x, r);
@@ -112,12 +106,12 @@ int EcWCheckPointOnCurve(const EcW* ecc, const EcPoint* P) {
     return !GFCmp(ecc, l, r); //1 - ok
 }
 
-int EcCheckPointOnCurve(const Ec* ecc, const EcPoint* P) {
+int EcCheckPointOnCurve(Ec* ecc, const EcPoint* P) {
     if (ecc->isEdwards) return EcEdCheckPointOnCurve(ecc, P);
     else return EcWCheckPointOnCurve(ecc, P);
 }
 
-int EcCheckPointInMainSubGroup(const Ec* ecc, const EcPoint* P) {
+int EcCheckPointInMainSubGroup(Ec* ecc, const EcPoint* P) {
     int r = EcCheckPointOnCurve(ecc, P);
     if (!r) return 0;
     EcPoint Q;
@@ -133,11 +127,8 @@ int EcCheckPointInMainSubGroup(const Ec* ecc, const EcPoint* P) {
 
 /* x^2 + y^2 = 1 + dx^2y^2 */
 /* y^2 = (1 - x^2)/(1 - dx^2) */
-void EcEdGenerateBasePoint(const EcEd* ecc, EcPoint* bp) {
-    randomize(ecc->wordLen, bp->x);
-    if (ecc->bitLen % 64 == 32) { // P-224
-        bp->x[ecc->wordLen-1] &= 0xFFFFFFFF;
-    }
+void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp) {
+    PRNGGenerateSequence( &ecc->prng, ecc->bitLen, (u8*)(bp->x) );
     int y = 0;
     GFElement t1, t2, t3, pp;
     copy(pp, ecc->p, ecc->wordLen);
@@ -159,17 +150,14 @@ void EcEdGenerateBasePoint(const EcEd* ecc, EcPoint* bp) {
         else break;
     } while(1);
 
-    tonelli_shanks_sqrt(ecc, t1, bp->y);
+    GFSqrt(ecc, t1, bp->y);
     EcDouble(ecc, bp, bp);
     EcDouble(ecc, bp, bp); /* Keeping Point in Main SubGroup by multiplication by factor (x4) */
 }
 
 //y^2 = x^3 + ax + b
-void EcWGenerateBasePoint(const EcW* ecc, EcPoint* bp) {
-    randomize(ecc->wordLen, bp->x);
-    if (ecc->bitLen % 64 == 32) { // P-224
-        bp->x[ecc->wordLen-1] &= 0xFFFFFFFF;
-    }
+void EcWGenerateBasePoint(EcW* ecc, EcPoint* bp) {
+    PRNGGenerateSequence( &ecc->prng, ecc->bitLen, (u8*)(bp->x) );
     int y = 0;
     GFElement sum, pp,tmp;
     copy(pp, ecc->p, ecc->wordLen);
@@ -187,15 +175,15 @@ void EcWGenerateBasePoint(const EcW* ecc, EcPoint* bp) {
         else break;
     } while(1);
 
-    tonelli_shanks_sqrt(ecc, sum, bp->y);
+    GFSqrt(ecc, sum, bp->y);
 }
 
-void EcGenerateBasePoint(const Ec* ecc, EcPoint* bp) {
+void EcGenerateBasePoint(Ec* ecc, EcPoint* bp) {
     if (ecc->isEdwards) EcEdGenerateBasePoint(ecc, bp);
     else EcWGenerateBasePoint(ecc,bp);
 }
 
-void EcEdAdd(const EcEd* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
+void EcEdAdd(EcEd* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
     GFElement z1, z2, z3, z4, z5, z6, z7;
     GFMul(ecc, A->x, B->x, z1); // z1 = x1 * x2
     GFMul(ecc, A->y, B->y, z2); // z2 = y1 * y2
@@ -219,7 +207,7 @@ void EcEdAdd(const EcEd* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
     GFMul(ecc, z2, z4, C->y);
 }
 
-int EcWAdd(const EcW* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C)
+int EcWAdd(EcW* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C)
 {
     GFElement s,difX,difY;
     GFSub(ecc,A->x,B->x,difX); // difX = x1-x2
@@ -241,12 +229,12 @@ int EcWAdd(const EcW* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C)
     return NORMAL_POINT;
 }
 
-int EcAdd(const Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
+int EcAdd(Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
     if (ecc->isEdwards) { EcEdAdd(ecc, A, B, C); return NORMAL_POINT; }
     else return EcWAdd(ecc, A, B, C);
 }
 
-void EcEdDouble(const EcEd* ecc, const EcPoint* A, EcPoint* B) {
+void EcEdDouble(EcEd* ecc, const EcPoint* A, EcPoint* B) {
     GFElement z1, z2, z3, z4, z5;
     GFSqr(ecc, A->x, z1);
     GFSqr(ecc, A->y, z2);
@@ -264,7 +252,7 @@ void EcEdDouble(const EcEd* ecc, const EcPoint* A, EcPoint* B) {
     GFMul(ecc, z2, z5, B->y);
 }
 
-int EcWDouble(const EcW* ecc, const EcPoint* A, EcPoint* B)
+int EcWDouble(EcW* ecc, const EcPoint* A, EcPoint* B)
 {
     if (GFCmp(ecc, A->y, zero) == 0) return INFINITY_POINT;
     GFElement s,tmp,tmp2;
@@ -294,15 +282,15 @@ int EcWDouble(const EcW* ecc, const EcPoint* A, EcPoint* B)
     return NORMAL_POINT;
 }
 
-int EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B) {
+int EcDouble(Ec* ecc, const EcPoint* A, EcPoint* B) {
     if (ecc->isEdwards) { EcEdDouble(ecc, A, B); return NORMAL_POINT; }
     else return EcWDouble(ecc,A,B);
 }
 
-void EcEdScalarMul(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
+void EcEdScalarMul(EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     EcPoint P, H;
-    copy_point(&P, &uP, ecc->wordLen);
-    copy_point(&H, A,  ecc->wordLen);
+    EcCopy(ecc, &P, &uP);
+    EcCopy(ecc, &H, A);
 
     for (u32 i=0; i<ecc->bitLen; i++) {
         if (get_bit(k, i)) {
@@ -310,46 +298,46 @@ void EcEdScalarMul(const EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B
         }
         EcEdDouble(ecc, &H, &H); 
     }
-    copy_point(B, &P, ecc->wordLen);
+    EcCopy(ecc, B, &P);
 }
 
-int EcWScalarMul(const EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
+int EcWScalarMul(EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
 {
     int s = NORMAL_POINT;
     
     int hb = bigint_bit_len(ecc->wordLen, k) - 1;
 
     EcPoint P;
-    copy_point(&P, A,  ecc->wordLen);
+    EcCopy(ecc, &P, A);
     for (int i = hb - 1;i >= 0;i--)
     {
         s &= EcWDouble(ecc, &P, &P); 
         if (get_bit(k, i))
             s &= EcWAdd(ecc, &P, A, &P);
     }
-    copy_point(B, &P, ecc->wordLen);
+    EcCopy(ecc, B, &P);
     return s;
 }
 
-int EcScalarMul(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
+int EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     if (ecc->isEdwards) { EcEdScalarMul(ecc, A, k, B); return NORMAL_POINT; }
     else return EcWScalarMul(ecc, A, k, B);
 }
 
-void EcConvertAffineToProjective(const Ec* ecc, const EcPoint* P, EcPointProj* Q) {
-    randomize(ecc->wordLen, Q->Z);
+void EcConvertAffineToProjective(Ec* ecc, const EcPoint* P, EcPointProj* Q) {
+    PRNGGenerateSequence(&ecc->prng, ecc->bitLen, (u8*)(Q->Z) );
     GFMul(ecc, P->x, Q->Z, Q->X);
     GFMul(ecc, P->y, Q->Z, Q->Y);
 }
 
-void EcConvertProjectiveToAffine(const Ec* ecc, const EcPointProj* P, EcPoint* Q) {
+void EcConvertProjectiveToAffine(Ec* ecc, const EcPointProj* P, EcPoint* Q) {
     GFElement Z_inv;
     GFInv(ecc, P->Z, Z_inv);
     GFMul(ecc, P->X, Z_inv, Q->x);
     GFMul(ecc, P->Y, Z_inv, Q->y);
 }
 
-void EcEdAddProj(const EcEd* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
+void EcEdAddProj(EcEd* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
     GFElement a,b,c,d,e,e1,e2,e3,f;
     GFMul(ecc, A->Z, B->Z, a);
     GFSqr(ecc, a, b);
@@ -375,7 +363,7 @@ void EcEdAddProj(const EcEd* ecc, const EcPointProj* A, const EcPointProj* B, Ec
     GFMul(ecc, e2, e3, C->Z);
 }
 
-int EcWAddProj(const EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C)
+int EcWAddProj(EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C)
 {
     GFElement u,v,a,tmp,x1z2,sqrv,y1z2;
     //v = x2z1 - x1z2
@@ -414,12 +402,12 @@ int EcWAddProj(const EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPoi
     return NORMAL_POINT;
 }
 
-int EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
+int EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
     if (ecc->isEdwards) {EcEdAddProj(ecc, A, B, C); return NORMAL_POINT;}
     else return EcWAddProj(ecc, A, B, C);
 }
 
-void EcEdDoubleProj(const EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
+void EcEdDoubleProj(EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
     GFElement a,b,c,d,e,e1,e2,e3,f;
     GFSqr(ecc, A->Z, a);
     GFSqr(ecc, a, b);
@@ -444,7 +432,7 @@ void EcEdDoubleProj(const EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
     GFMul(ecc, e2, e3, B->Z);
 }
 
-int EcWDoubleProj(const EcW* ecc, const EcPointProj* A, EcPointProj* B)
+int EcWDoubleProj(EcW* ecc, const EcPointProj* A, EcPointProj* B)
 {
     if(!GFCmp(ecc,A->Y,zero))
         return INFINITY_POINT;
@@ -487,12 +475,12 @@ int EcWDoubleProj(const EcW* ecc, const EcPointProj* A, EcPointProj* B)
     return NORMAL_POINT;
 }
 
-int EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B) {
+int EcDoubleProj(Ec* ecc, const EcPointProj* A, EcPointProj* B) {
     if (ecc->isEdwards) {EcEdDoubleProj(ecc, A, B); return NORMAL_POINT;}
     else return EcWDoubleProj(ecc, A, B);
 }
 
-void EcEdScalarMulProj(const EcEd* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
+void EcEdScalarMulProj(EcEd* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     EcPointProj P, H;
     EcConvertAffineToProjective(ecc, &uP, &P);
     
@@ -507,7 +495,7 @@ void EcEdScalarMulProj(const EcEd* ecc, const EcPointProj* A, const BigInt k, Ec
     }
 }
 
-int EcWScalarMulProj(const EcW* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
+int EcWScalarMulProj(EcW* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     EcPointProj H;
     
     EcCopyProj(ecc, B, A); // B := A
@@ -526,7 +514,7 @@ int EcWScalarMulProj(const EcW* ecc, const EcPointProj* A, const BigInt k, EcPoi
     return s;
 }
 
-int EcScalarMulProj(const Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
+int EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     if (ecc->isEdwards) {EcEdScalarMulProj(ecc, A, k, B); return NORMAL_POINT;}
     else return EcWScalarMulProj(ecc, A, k, B);
 }
@@ -639,7 +627,7 @@ int EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards) {
             default:
             return -1;
         }
-        return EcEdInit(ecc, &G, bitLen, n, d);
+        return EcEdInit(ecc, bitLen, p, &G, n, d);
     }
     else
     {
@@ -680,11 +668,11 @@ int EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards) {
             default:
             return -1;
         }
-        return EcWInit(ecc, &G, bitLen, n, a, b);
+        return EcWInit(ecc, bitLen, p, &G, n, a, b);
     }
 }
 
-void EcDump(const Ec* ecc, char* buf) {
+void EcDump(Ec* ecc, char* buf) {
     char e[60];
     if (ecc->isEdwards) strcpy(e, "Edwards"); else strcpy(e, "Weierstrass");
 

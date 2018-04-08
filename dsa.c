@@ -46,11 +46,13 @@ static const u64 M[] = {
 
 void PRNGInit(PRNG* generator, unsigned char* seed, int seed_len) {
     memcpy( generator->state, seed, seed_len );
+    srand(time(NULL));
+    generator->state[0] = 1;
     PRNGRun(generator);
 }
 
 void PRNGRun(PRNG* generator) {
-    generator->state[0] ^= rand();
+    generator->state[0] ^= 1;
 }
 
 void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest) {
@@ -63,7 +65,6 @@ void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest) {
 }
 
 int EcDsaGenerateKey(Ec* ecc, BigInt key, EcPoint* Q) {
-    BigInt seed;
     EcPointProj Q_p;
 
     PRNGGenerateSequence( &(ecc->prng), ecc->bitLen, (unsigned char*)key );
@@ -84,7 +85,7 @@ int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signatu
     EcPointProj Q_p;
     
     gen_k:
-    PRNGGenerateSequence( &ecc->prng, ecc->bitLen, (unsigned char*)k ); // generate k
+    PRNGGenerateSequence( &(ecc->prng), ecc->bitLen, (unsigned char*)k ); // generate k
 
     while (GFCmp(ecc, k, ecc->n) != -1) {
         GFSub(ecc, k, ecc->n, k);
@@ -113,7 +114,7 @@ int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signatu
     return 0;
 }
 
-int EcDsaVerify(const Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature* signature) {
+int EcDsaVerify(Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature* signature) {
     if ( !EcCheckPointInMainSubGroup(ecc, Q) ) return VER_BROKEN_KEY;
     if ( ( GFCmp(ecc, signature->r, unity) != 1 ) || ( GFCmp(ecc, signature->r, ecc->n) != -1 ) 
         || ( GFCmp(ecc, signature->s, unity) != 1 ) || ( GFCmp(ecc, signature->s, ecc->n) != -1 ) ) return VER_BROKEN_SIGNATURE;
@@ -137,6 +138,8 @@ int EcDsaVerify(const Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSign
         GFSub(ecc, v, ecc->n, v);
     } // v = P.x mod n
 
+    printf("v: ");
+    GFDump(ecc, v);
     /* v =? r */
     if ( GFCmp( ecc, v, signature->r ) != 0 ) return VER_BROKEN_SIGNATURE;
     return VER_OK;

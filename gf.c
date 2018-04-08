@@ -17,11 +17,11 @@
 #define MSB_M      0x8000000000000000
 #define HEX_FORMAT "%.16llX"
 
-const u64 unity[] = { 0x1, 0, 0, 0, 0, 0 };
+const u64 unity[] = { 0x1, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-const u64 zero[] = {0, 0, 0, 0, 0, 0};
+const u64 zero[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-const EcPoint uP  = { { 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0} };
+const EcPoint uP  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0} };
 
 const u64 p192[]  = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
 
@@ -30,20 +30,17 @@ const u64 p256[] = { 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF, 0x0000000000000000,
 const u64 p224[]  = { 0x0000000000000001, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF };
 
 const u64 p384[]  = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
-                                          
 
-inline u64 get_bit(const GFElement a, u64 num) {
+const u64 p521[] = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 
+                     0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0x1FF };             
+
+inline u64 get_bit(const u64* a, u64 num) {
     return a[num/64] & ((u64)1 << (num % 64));
 }
 
-inline void copy(GFElement a, const GFElement b, int len) {
+inline void copy(u64* a, const u64* b, int len) {
     for (int i=0;i<len;i++)
         a[i] = b[i];
-}
-
-inline void copy_point(EcPoint* P, const EcPoint* Q, int len) {
-    copy(P->x, Q->x, len);
-    copy(P->y, Q->y, len);
 }
 
 inline u64 add(u64 n, const u64* a, const u64* b, u64* c) {
@@ -93,22 +90,22 @@ inline u64 _add_raw(u64 a, u64 b, u64* c) {
 #endif 
 }
 
-inline void mul_by_word(const Ec* ecc, const u64* a, u64 d, u64* c) {
+inline void mul_by_word(u64 n, const u64* a, u64 d, u64* c) {
     u64 carry = 0, carry_tmp;
-    for (int i=0; i < ecc->wordLen; i++) {
+    for (int i=0; i < n; i++) {
         carry_tmp = carry;
         _mul_raw(d, a[i], &(c[i]), &carry);
         carry += _add_raw(c[i], carry_tmp, &(c[i]));
     }
-    c[ecc->wordLen] = carry;
+    c[n] = carry;
 }
 
-inline void mul(const Ec* ecc, const u64* a, const u64* b, u64* c) {
+inline void mul(u64 n, const u64* a, const u64* b, u64* c) {
     GFElement tmp;
-    memset(c, 0, 2*8*ecc->wordLen);
-    for (u64 i=0; i < ecc->wordLen; i++) {
-        mul_by_word(ecc, a, b[i], (u64*)tmp);
-        add(ecc->wordLen + 1, c+i, tmp, c+i);
+    memset(c, 0, 2*8*n);
+    for (u64 i=0; i < n; i++) {
+        mul_by_word(n, a, b[i], (u64*)tmp);
+        add(n + 1, c+i, tmp, c+i);
     }
 }
 
@@ -123,7 +120,7 @@ inline int word_bit_len(u64 n) {
     return 0;
 }
 
-inline int bigint_bit_len(u64 nWords, const BigInt a) {
+inline int bigint_bit_len(u64 nWords, const u64* a) {
     int bit_len = nWords * 64;
     int i=nWords-1;
     do {
@@ -134,7 +131,7 @@ inline int bigint_bit_len(u64 nWords, const BigInt a) {
     return bit_len;
 }
 
-inline void shl(u64 n, const GFElement a, GFElement res, u64 bits) {
+inline void shl(u64 n, const u64* a, u64* res, u64 bits) {
     u64 buf = 0;
     int chk = bits / 64;
     bits = bits % 64;
@@ -146,6 +143,7 @@ inline void shl(u64 n, const GFElement a, GFElement res, u64 bits) {
             res[i+chk] = (cur << bits) ^ buf;
             buf = (cur & (MAX_U64 << ( 64-bits ))) >> ( 64-bits );
         }
+        //res[chk] &= (MAX_U64 << bits);
     }
     else {
         for (int i = 0; i < n; i++) {
@@ -160,7 +158,7 @@ inline void shl(u64 n, const GFElement a, GFElement res, u64 bits) {
     res[n+chk] = buf;
 }
 
-inline void shr(u64 n, const GFElement a, GFElement res, u64 bits) {
+inline void shr(u64 n, const u64* a, u64* res, u64 bits) {
     u64 buf = 0;
     int chk = bits / 64;
     bits = bits % 64;
@@ -172,6 +170,7 @@ inline void shr(u64 n, const GFElement a, GFElement res, u64 bits) {
             res[i-chk] = (cur >> bits) ^ buf;
             buf = (cur & (MAX_U64 >> ( 64-bits ))) << (64 - bits);
         }
+        //res[n-1] &= MAX_U64 >> (64-bits);
     }
     else {
         for (int i = n-1+chk; i >= chk; i--) {
@@ -184,15 +183,13 @@ inline void shr(u64 n, const GFElement a, GFElement res, u64 bits) {
     }
 }
 
-
-
-inline void dump(u64 n, const BigInt a) {
+inline void dump(u64 n, const u64* a) {
     for (int i=n-1; i>=0; i--)
         printf(HEX_FORMAT, a[i]);
     printf("\n");
 }
 
-inline int cmp(u64 n, const BigInt a, const BigInt b) {
+inline int cmp(u64 n, const u64* a, const u64* b) {
     for (int i = n - 1; i >= 0; i--)
     {
         if (a[i] > b[i]) return 1;
@@ -201,18 +198,22 @@ inline int cmp(u64 n, const BigInt a, const BigInt b) {
     return 0;
 }
 
-void zero_int(u64 n, BigInt a) {
+void zero_int(u64 n, u64* a) {
     for (int i=0; i<n; i++) a[i] = 0;
 }
 
-/* Dummy aryphmetic for ECDSA */
-void add_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
+void add_mod(u64 n, const BigInt a, const BigInt b, const BigInt m, BigInt res) {
     res[n] = add(n, a, b, res);
     if (cmp(n+1, res, m) == 1) sub(n+1, res, m, res);
 }
 
-void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
-    u64 b_len = bigint_bit_len(n, b);
+void mul_mod(u64 n, const BigInt a, const BigInt b, const BigInt m, BigInt res) {
+    VeryBigInt d;
+    mul(n, a, b, d);
+    divide(n, d, m, NULL, d);
+    copy(res, d, n);
+    
+    /*u64 b_len = bigint_bit_len(n, b);
     BigInt mm, r;
     zero_int(n, r);
     
@@ -221,12 +222,13 @@ void mul_mod(u64 n, const u64* a, const u64* b, const u64* m, u64* res) {
         if (get_bit(b, i)) add_mod(n, r, mm, m, r);
         add_mod(n, mm, mm, m, mm);
     }
-    copy(res, r, n);
+    copy(res, r, n);*/
+    
 }
 
-void exp_mod(u64 n, const u64* a, const u64* p, const u64* m, u64* res) {
+void exp_mod(u64 n, const BigInt a, const BigInt p, const BigInt m, BigInt res) {
     u64 b_len = bigint_bit_len(n, p);
-    BigInt mm, r;
+    VeryBigInt mm, r;
     zero_int(n+1, r);
     r[0] = 1;
     copy(mm, a, n);
@@ -237,41 +239,90 @@ void exp_mod(u64 n, const u64* a, const u64* p, const u64* m, u64* res) {
     copy(res, r, n);
 }
 
-void inv_mod(u64 n, const u64* a, const u64* m, u64* res) {
-    BigInt mm;
-    copy(mm, m, n);
-    mm[0] -= 2; 
-    exp_mod(n, a, mm, m, res);
-}
-
-void basic_reduction(u64 n, const BigInt a, const BigInt p, BigInt res) {
-    BigInt tmp;
-    BigInt m;
-
-    copy(res, a, 2*n);
-
-    int k = bigint_bit_len(n, p);
-    int t;
-    
-
-    while (cmp(2*n, res, p) != -1) {
-        t = bigint_bit_len(2*n, res);
-        shl(n, p, m, t-k);
-        if (cmp(2*n, m, res) == 1) {
-            t--;
-            shl(n, p, m, t-k);
-        }
-        sub(2*n, res, m, res);
-        printf("%d %d\n", k,t);
+void imul(u64 n, const u64* a, const u64* b, u64* c) {
+    /* c := a * b, where b could be signed value */
+    int b_isneg = b[n] & MSB_M;
+    BigInt bb;
+    if (b_isneg) {
+        sub(n, zero, b, bb);
+    }
+    else {
+        copy(bb, b, n);
+    }
+    mul(n, a, bb, c);
+    if (b_isneg) {
+        sub(2*n, zero, c, c);
     }
 }
 
-inline void randomize(u64 len, GFElement a) {
-    for (u64 i=0; i<len; i++)
-        a[i] = ((u64)rand() << 32) ^ (u64)rand();    
+void inv_mod(u64 n, const BigInt a, const BigInt m, BigInt res) {
+    VeryBigInt mm;
+    //memset(mm, 0, sizeof(BigInt));
+    copy(mm, m, n);
+    mm[0] -= 2; 
+    exp_mod(n, a, mm, m, res);
+
+    /* Compute a^{-1} mod m with Extended Euclidean Algorithm 
+    VeryBigInt q;
+    BigInt t, r, newt, newr, tmp;
+    zero_int(n, t); // t := 0
+    zero_int(n, newt); newt[0] = 1; // newt := 1
+    copy(r, m, n); // r := m
+    copy(newr, a, n); // newr := a
+
+    while(cmp(n, newr, zero) != 0) {
+        divide(n, r, newr, q, tmp); // q := r div newr, tmp := r mod newr
+        copy(r, newr, n); // r := newr
+        copy(newr, tmp, n); // newr := tmp 
+        imul(n, q, newt, q); // q := q*newt
+        sub(n+1, t, q, tmp); // tmp := t - q
+        copy(t, newt, n+1);
+        copy(newt, tmp, n+1);
+    }
+    copy(res, t, n);
+    if (res[n] & MSB_M) {
+        sub(n, res, m, res);
+    }*/
 }
 
-void tonelli_shanks_sqrt(const Ec* ecc, const GFElement a, GFElement r) {
+void divide(u64 n, const u64* a, const u64* b, u64* quotient, u64* reminder) {
+    VeryBigInt q;
+    VeryBigInt tmp, r;
+    
+
+    copy(r, a, 2*n);
+    zero_int(2*n, q);
+
+    int k = bigint_bit_len(2*n, a);
+    int t = bigint_bit_len(n, b);
+
+    //int nb = (t % 64 == 0) ? t / 64 : (t / 64) + 1;
+    if (k < t) {
+        //if (quotient) copy(quotient, q, n);
+        copy(reminder, r, n);
+        return;
+    }
+
+    k = k-t;
+    shl(n, b, tmp, k);
+
+    while (k >= 0) {
+        if (sub(2*n, r, tmp, r) == 0) {
+            q[ k/64 ] |= (u64)1 << (k % 64);
+        }
+        else {
+            add(2*n, r, tmp, r);
+        }
+        
+        div2(2*n, tmp);
+        k--;
+    }
+
+    if (quotient) copy(quotient, q, 2*n);
+    copy(reminder, r, n);
+}
+
+void GFSqrt(const Ec* ecc, const GFElement a, GFElement r) {
     // p = Q*2^s
     GFElement Q, pp, z, tmp, c, t, R, b;
     copy(z, unity, ecc->wordLen);
@@ -382,6 +433,14 @@ void GFAdd(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
             }
             break;
         }
+        case 521: {
+            add(ecc->wordLen, a, b, c);
+            carry = (c[ecc->wordLen - 1] & ((u64)1 << 9));
+            if (carry) {
+                sub(ecc->wordLen, c, ecc->p, c);
+            }
+            break;
+        }
     }
 }
 
@@ -394,10 +453,10 @@ void GFSub(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
 
 /* FIPS-192 Fp: p = 2^192 - 2^64 - 1*/
 
-void GFMul_FIPS192(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
-    GFElement tmp;
-    mul(ecc, a, b, tmp);
-    copy(c, tmp, 2*ecc->wordLen);
+void GFMul_FIPS192(const Ec* ecc, const GFElement a, const GFElement b, GFElement res) {
+    BigInt tmp, c;
+    mul(3, a, b, c);
+
     u64 carry = 0;
 
     // S_1
@@ -405,28 +464,28 @@ void GFMul_FIPS192(const Ec* ecc, const GFElement a, const GFElement b, GFElemen
     tmp[1] = c[3];
     tmp[2] = 0;
     
-    carry += add(3, c, tmp, c);
+    carry += add(3, c, tmp, res);
     
     // S_2
     tmp[0] = 0;
     tmp[1] = c[4];
     tmp[2] = c[4];
 
-    carry = add(3, c, tmp, c);
-    if (carry) sub(ecc->wordLen, c, ecc->p, c);
+    carry = add(3, res, tmp, res);
+    if (carry) sub(3, res, ecc->p, res);
     
     // S_3
     tmp[0] = c[5];
     tmp[1] = c[5];
     tmp[2] = c[5];
 
-    carry = add(3, c, tmp, c);
-    if (carry) sub(ecc->wordLen, c, ecc->p, c);
+    carry = add(3, res, tmp, res);
+    if (carry) sub(3, res, ecc->p, res);
 
-    c[3] = 0;
+    res[3] = 0;
 
-    if(GFCmp(ecc,c,p192)!=-1)
-        sub(ecc->wordLen, c, p192, c);
+    if(GFCmp(ecc, res, ecc->p) != -1)
+        sub(3, res, ecc->p, res);
 }
 
 void GFSqr_FIPS192(const Ec* ecc, const GFElement a, GFElement b) {
@@ -435,67 +494,64 @@ void GFSqr_FIPS192(const Ec* ecc, const GFElement a, GFElement b) {
 
 /* FIPS-224 Fp: p = 2^224 - 2^96 + 1 */
 
-void GFMul_FIPS224(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
-    GFElement res, tmp,ta,tb;
-    copy(ta, a, ecc->wordLen);
-    copy(tb, b, ecc->wordLen);
-    ta[3] = ta[3] & 0xFFFFFFFF; //truncated a
-    tb[3] = tb[3] & 0xFFFFFFFF; //truncated b
-    mul(ecc, ta, tb, res);
-    copy(c, res, ecc->wordLen);
+void GFMul_FIPS224(const Ec* ecc, const GFElement a, const GFElement b, GFElement res) {
+    BigInt tmp, c;
+    mul(ecc->wordLen, a, b, c);
+
+    copy(res, c, 4);
 
     u64 carry = 0;
-    c[3] = c[3] & 0xFFFFFFFF;
+    res[3] &= 0xFFFFFFFF;
 
     // S_1
     tmp[0] = 0;
     ((u32*)tmp)[2] = 0;
-    ((u32*)tmp)[3] = ((u32*)res)[7];
-    ((u32*)tmp)[4] = ((u32*)res)[8];
-    ((u32*)tmp)[5] = ((u32*)res)[9];
-    ((u32*)tmp)[6] = ((u32*)res)[10];
+    ((u32*)tmp)[3] = ((u32*)c)[7];
+    ((u32*)tmp)[4] = ((u32*)c)[8];
+    ((u32*)tmp)[5] = ((u32*)c)[9];
+    ((u32*)tmp)[6] = ((u32*)c)[10];
     ((u32*)tmp)[7] = 0;
 
-    add(ecc->wordLen, tmp, c, c);
+    add(4, tmp, res, res);
     
     // S_2
-    ((u32*)tmp)[3] = ((u32*)res)[11];
-    ((u32*)tmp)[4] = ((u32*)res)[12];
-    ((u32*)tmp)[5] = ((u32*)res)[13];
+    ((u32*)tmp)[3] = ((u32*)c)[11];
+    ((u32*)tmp)[4] = ((u32*)c)[12];
+    ((u32*)tmp)[5] = ((u32*)c)[13];
     ((u32*)tmp)[6] = 0;
 
-    add(ecc->wordLen, tmp, c, c);
+    add(4, tmp, res, res);
 
     // D_1
-    ((u32*)tmp)[0] = ((u32*)res)[11];
-    ((u32*)tmp)[1] = ((u32*)res)[12];
-    ((u32*)tmp)[2] = ((u32*)res)[13];
+    ((u32*)tmp)[0] = ((u32*)c)[11];
+    ((u32*)tmp)[1] = ((u32*)c)[12];
+    ((u32*)tmp)[2] = ((u32*)c)[13];
     ((u32*)tmp)[3] = 0;
     tmp[2] = 0;
     tmp[3] = 0;
     
-    sub(ecc->wordLen, c, tmp, c);
+    sub(4, res, tmp, res);
 
     // D_2
-    ((u32*)tmp)[0] = ((u32*)res)[7];
-    ((u32*)tmp)[1] = ((u32*)res)[8];
-    ((u32*)tmp)[2] = ((u32*)res)[9];
-    ((u32*)tmp)[3] = ((u32*)res)[10];
-    ((u32*)tmp)[4] = ((u32*)res)[11];
-    ((u32*)tmp)[5] = ((u32*)res)[12];
-    ((u32*)tmp)[6] = ((u32*)res)[13];
+    ((u32*)tmp)[0] = ((u32*)c)[7];
+    ((u32*)tmp)[1] = ((u32*)c)[8];
+    ((u32*)tmp)[2] = ((u32*)c)[9];
+    ((u32*)tmp)[3] = ((u32*)c)[10];
+    ((u32*)tmp)[4] = ((u32*)c)[11];
+    ((u32*)tmp)[5] = ((u32*)c)[12];
+    ((u32*)tmp)[6] = ((u32*)c)[13];
 
-    sub(ecc->wordLen, c, tmp, c);
+    sub(4, res, tmp, res);
     
-	while(MSB_M & c[3]) { // maybe just 'if' is enough
-        add(ecc->wordLen, c, p224, c);
+	while(((int*)res)[7] < 0) { 
+        add(4, res, ecc->p, res);
     }
-    while(((u32*)c)[7] >= 1) { //and here
-        sub(ecc->wordLen, c, p224, c);
+    while(((int*)res)[7] > 0) { 
+        sub(4, res, ecc->p, res);
     }
 
-    if(GFCmp(ecc,c,p224)!=-1) {
-        sub(ecc->wordLen, c, p224, c);
+    if(GFCmp( ecc, res, ecc->p) != -1) {
+        sub(4, res, ecc->p, res);
     }
 }
 
@@ -504,99 +560,99 @@ void GFSqr_FIPS224(const Ec* ecc, const GFElement a, GFElement b) {
 }
 
 /*p = 2^256 – 2^224 + 2^192 + 2^96 – 1*/
-void GFMul_FIPS256(const Ec* ecc,const GFElement a,const GFElement b,  GFElement c) 
+void GFMul_FIPS256(const Ec* ecc,const GFElement a,const GFElement b, GFElement res) 
 {
-    GFElement tmp,res;
-    mul(ecc, a, b, res);
-    int len = ecc->wordLen; 
-    copy(c, res, ecc->wordLen);
+    GFElement tmp, c;
+
+    mul(4, a, b, c);
+
 
     int carry; //signed, its important
-    tmp[len] = 0;
-
-    tmp[3] = res[7];
-    tmp[2] = res[6];
-    ((u32*)tmp)[3] = ((u32*)res)[11];
+    tmp[4] = 0;
+    tmp[3] = c[7];
+    tmp[2] = c[6];
+    ((u32*)tmp)[3] = ((u32*)c)[11];
     ((u32*)tmp)[2] = 0;
     tmp[0] = 0;
-    mul2(ecc->wordLen,tmp);
-    carry = tmp[len]; //in case 2*tmp > 2^256
-    carry+=add(len,c,tmp,c);
+    mul2(4, tmp);
+    carry = tmp[4]; //in case 2*tmp > 2^256
+    carry += add(4, c, tmp, res);
 
-    tmp[len] = 0;
+    tmp[4] = 0;
     ((u32*)tmp)[7] = 0;
-    ((u32*)tmp)[6] = ((u32*)res)[15];
-    ((u32*)tmp)[5] = ((u32*)res)[14];
-    ((u32*)tmp)[4] = ((u32*)res)[13];
-    ((u32*)tmp)[3] = ((u32*)res)[12];
-    mul2(ecc->wordLen,tmp);
-    carry+=tmp[len];
-    carry+=add(len,c,tmp,c);
+    ((u32*)tmp)[6] = ((u32*)c)[15];
+    ((u32*)tmp)[5] = ((u32*)c)[14];
+    ((u32*)tmp)[4] = ((u32*)c)[13];
+    ((u32*)tmp)[3] = ((u32*)c)[12];
+    mul2(4, tmp);
+    carry += tmp[4];
+    carry += add(4, res, tmp, res);
 
-    tmp[3] = res[7];
+    tmp[3] = c[7];
     tmp[2] = 0;
     ((u32*)tmp)[3] = 0;
-    ((u32*)tmp)[2] = ((u32*)res)[10];
-    tmp[0] = res[4];
-    carry+=add(len,c,tmp,c);
+    ((u32*)tmp)[2] = ((u32*)c)[10];
+    tmp[0] = c[4];
+    carry += add(4, res, tmp, res);
 
-    ((u32*)tmp)[7] = ((u32*)res)[8];
-    ((u32*)tmp)[6] = ((u32*)res)[13];
-    tmp[2] = res[7];
-    ((u32*)tmp)[3] = ((u32*)res)[13];
-    ((u32*)tmp)[2] = ((u32*)res)[11];
-    ((u32*)tmp)[1] = ((u32*)res)[10];
-    ((u32*)tmp)[0] = ((u32*)res)[9];
-    carry+=add(len,c,tmp,c);
+    ((u32*)tmp)[7] = ((u32*)c)[8];
+    ((u32*)tmp)[6] = ((u32*)c)[13];
+    tmp[2] = c[7];
+    ((u32*)tmp)[3] = ((u32*)c)[13];
+    ((u32*)tmp)[2] = ((u32*)c)[11];
+    ((u32*)tmp)[1] = ((u32*)c)[10];
+    ((u32*)tmp)[0] = ((u32*)c)[9];
+    carry += add(4, res, tmp, res);
 
-    ((u32*)tmp)[7] = ((u32*)res)[10];
-    ((u32*)tmp)[6] = ((u32*)res)[8];
+    ((u32*)tmp)[7] = ((u32*)c)[10];
+    ((u32*)tmp)[6] = ((u32*)c)[8];
     tmp[2] = 0;
     ((u32*)tmp)[3] = 0;
-    ((u32*)tmp)[2] = ((u32*)res)[13];
-    ((u32*)tmp)[1] = ((u32*)res)[12];
-    ((u32*)tmp)[0] = ((u32*)res)[11];
-    carry-=sub(len, c, tmp, c);
+    ((u32*)tmp)[2] = ((u32*)c)[13];
+    ((u32*)tmp)[1] = ((u32*)c)[12];
+    ((u32*)tmp)[0] = ((u32*)c)[11];
+    carry -= sub(4, res, tmp, res);
 
-    ((u32*)tmp)[7] = ((u32*)res)[11];
-    ((u32*)tmp)[6] = ((u32*)res)[9];
+    ((u32*)tmp)[7] = ((u32*)c)[11];
+    ((u32*)tmp)[6] = ((u32*)c)[9];
     tmp[2] = 0;
-    tmp[1] = res[7];
-    tmp[0] = res[6];
-    carry-=sub(len, c, tmp, c);
+    tmp[1] = c[7];
+    tmp[0] = c[6];
+    carry -= sub(4, res, tmp, res);
 
-    ((u32*)tmp)[7] = ((u32*)res)[12];
+    ((u32*)tmp)[7] = ((u32*)c)[12];
     ((u32*)tmp)[6] = 0;
-    ((u32*)tmp)[5] = ((u32*)res)[10];
-    ((u32*)tmp)[4] = ((u32*)res)[9];
-    ((u32*)tmp)[3] = ((u32*)res)[8];
-    ((u32*)tmp)[2] = ((u32*)res)[15];
-    ((u32*)tmp)[1] = ((u32*)res)[14];
-    ((u32*)tmp)[0] = ((u32*)res)[13];
-    carry-=sub(len, c, tmp, c);
+    ((u32*)tmp)[5] = ((u32*)c)[10];
+    ((u32*)tmp)[4] = ((u32*)c)[9];
+    ((u32*)tmp)[3] = ((u32*)c)[8];
+    ((u32*)tmp)[2] = ((u32*)c)[15];
+    ((u32*)tmp)[1] = ((u32*)c)[14];
+    ((u32*)tmp)[0] = ((u32*)c)[13];
 
-    ((u32*)tmp)[7] = ((u32*)res)[13];
+    carry-=sub(4, res, tmp, res);
+
+    ((u32*)tmp)[7] = ((u32*)c)[13];
     ((u32*)tmp)[6] = 0;
-    tmp[2] = res[5];
-    ((u32*)tmp)[3] = ((u32*)res)[9];
+    tmp[2] = c[5];
+    ((u32*)tmp)[3] = ((u32*)c)[9];
     ((u32*)tmp)[2] = 0;
-    tmp[0] = res[7];
-    carry-=sub(len, c, tmp, c);
+    tmp[0] = c[7];
 
-    
-    while(carry>0) //in case of c > 2^256
+    carry-=sub(4, res, tmp, res);
+
+    while(carry > 0) 
     {
-        sub(len,c,p256,c);
+        sub(4, res, ecc->p, res);
         carry--;
     }
-    while(carry<0) //in case of c<0
+    while(carry < 0) 
     {
-        add(len,c,p256,c);
+        add(4, res, ecc->p, res);
         carry++;
     }
     
-    if(GFCmp(ecc,c,p256)!=-1)
-        sub(len, c, p256, c);
+    if(GFCmp(ecc, res, ecc->p) != -1)
+        sub(4, res, ecc->p, res);
 }
 
 void GFSqr_FIPS256(const Ec* ecc,const GFElement a,  GFElement  b) {
@@ -604,158 +660,174 @@ void GFSqr_FIPS256(const Ec* ecc,const GFElement a,  GFElement  b) {
 }
 
 /* FIPS-384 Fp: p = p^384 - 2^128 - 2^96 +  2^32 - 1 */
-void GFMul_FIPS384(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
-    GFElement res, tmp;
-    mul(ecc, a, b, res);
-    copy(c, res, 2*ecc->wordLen);
+void GFMul_FIPS384(const Ec* ecc, const GFElement a, const GFElement b, GFElement res) {
+    BigInt tmp;
+    VeryBigInt c;
+    mul(6, a, b, c);
 
     int carry = 0;
 
     // 2*S_1
     tmp[0] = 0;
     tmp[1] = 0;
-    ((u32*)tmp)[4] = ((u32*)res)[21];
-    ((u32*)tmp)[5] = ((u32*)res)[22];
-    ((u32*)tmp)[6] = ((u32*)res)[23];
+    ((u32*)tmp)[4] = ((u32*)c)[21];
+    ((u32*)tmp)[5] = ((u32*)c)[22];
+    ((u32*)tmp)[6] = ((u32*)c)[23];
     ((u32*)tmp)[7] = 0;
     tmp[4] = 0;
     tmp[5] = 0;
 
-    mul2(ecc->wordLen, tmp);
-    carry = tmp[ecc->wordLen];
-    carry+=add(ecc->wordLen, tmp, c, c);
+    mul2(6, tmp);
+    carry = tmp[6];
+    carry += add(6, tmp, c, res);
 
     // S_2
-    ((u32*)tmp)[0] = ((u32*)res)[12];
-    ((u32*)tmp)[1] = ((u32*)res)[13];
-    ((u32*)tmp)[2] = ((u32*)res)[14];
-    ((u32*)tmp)[3] = ((u32*)res)[15];
-    ((u32*)tmp)[4] = ((u32*)res)[16];
-    ((u32*)tmp)[5] = ((u32*)res)[17];
-    ((u32*)tmp)[6] = ((u32*)res)[18];
-    ((u32*)tmp)[7] = ((u32*)res)[19];
-    ((u32*)tmp)[8] = ((u32*)res)[20];
-    ((u32*)tmp)[9] = ((u32*)res)[21];
-    ((u32*)tmp)[10] = ((u32*)res)[22];
-    ((u32*)tmp)[11] = ((u32*)res)[23];
+    tmp[0] = c[6];
+    tmp[1] = c[7];
+    tmp[2] = c[8];
+    tmp[3] = c[9];
+    tmp[4] = c[10];
+    tmp[5] = c[11];
 
-    carry+= add(ecc->wordLen, tmp, c, c);
+    carry += add(6, tmp, res, res);
 
     // S_3
-    ((u32*)tmp)[0] = ((u32*)res)[21];
-    ((u32*)tmp)[1] = ((u32*)res)[22];
-    ((u32*)tmp)[2] = ((u32*)res)[23];
-    ((u32*)tmp)[3] = ((u32*)res)[12];
-    ((u32*)tmp)[4] = ((u32*)res)[13];
-    ((u32*)tmp)[5] = ((u32*)res)[14];
-    ((u32*)tmp)[6] = ((u32*)res)[15];
-    ((u32*)tmp)[7] = ((u32*)res)[16];
-    ((u32*)tmp)[8] = ((u32*)res)[17];
-    ((u32*)tmp)[9] = ((u32*)res)[18];
-    ((u32*)tmp)[10] = ((u32*)res)[19];
-    ((u32*)tmp)[11] = ((u32*)res)[20];
+    ((u32*)tmp)[0] = ((u32*)c)[21];
+    ((u32*)tmp)[1] = ((u32*)c)[22];
+    ((u32*)tmp)[2] = ((u32*)c)[23];
+    ((u32*)tmp)[3] = ((u32*)c)[12];
+    ((u32*)tmp)[4] = ((u32*)c)[13];
+    ((u32*)tmp)[5] = ((u32*)c)[14];
+    ((u32*)tmp)[6] = ((u32*)c)[15];
+    ((u32*)tmp)[7] = ((u32*)c)[16];
+    ((u32*)tmp)[8] = ((u32*)c)[17];
+    ((u32*)tmp)[9] = ((u32*)c)[18];
+    ((u32*)tmp)[10] = ((u32*)c)[19];
+    ((u32*)tmp)[11] = ((u32*)c)[20];
 
-    carry += add(ecc->wordLen, c, tmp, c);
+    carry += add(6, res, tmp, res);
 
     // S_4
     ((u32*)tmp)[0] = 0;
-    ((u32*)tmp)[1] = ((u32*)res)[23];
+    ((u32*)tmp)[1] = ((u32*)c)[23];
     ((u32*)tmp)[2] = 0;
-    ((u32*)tmp)[3] = ((u32*)res)[20];
-    ((u32*)tmp)[4] = ((u32*)res)[12];
-    ((u32*)tmp)[5] = ((u32*)res)[13];
-    ((u32*)tmp)[6] = ((u32*)res)[14];
-    ((u32*)tmp)[7] = ((u32*)res)[15];
-    ((u32*)tmp)[8] = ((u32*)res)[16];
-    ((u32*)tmp)[9] = ((u32*)res)[17];
-    ((u32*)tmp)[10] = ((u32*)res)[18];
-    ((u32*)tmp)[11] = ((u32*)res)[19];
+    ((u32*)tmp)[3] = ((u32*)c)[20];
+    ((u32*)tmp)[4] = ((u32*)c)[12];
+    ((u32*)tmp)[5] = ((u32*)c)[13];
+    ((u32*)tmp)[6] = ((u32*)c)[14];
+    ((u32*)tmp)[7] = ((u32*)c)[15];
+    ((u32*)tmp)[8] = ((u32*)c)[16];
+    ((u32*)tmp)[9] = ((u32*)c)[17];
+    ((u32*)tmp)[10] = ((u32*)c)[18];
+    ((u32*)tmp)[11] = ((u32*)c)[19];
 
-    carry += add(ecc->wordLen, c, tmp, c);
+    carry += add(6, res, tmp, res);
 
     // S_5
     tmp[0] = 0;
     tmp[1] = 0;
-    ((u32*)tmp)[4] = ((u32*)res)[20];
-    ((u32*)tmp)[5] = ((u32*)res)[21];
-    ((u32*)tmp)[6] = ((u32*)res)[22];
-    ((u32*)tmp)[7] = ((u32*)res)[23];
+    tmp[2] = c[10];
+    tmp[3] = c[11];
     tmp[4] = 0;
     tmp[5] = 0;
 
-    carry+=add(ecc->wordLen, c, tmp, c);
+    carry += add(6, res, tmp, res);
 
     // S_6
-    ((u32*)tmp)[0] = ((u32*)res)[20];
+    ((u32*)tmp)[0] = ((u32*)c)[20];
     ((u32*)tmp)[1] = 0;
     ((u32*)tmp)[2] = 0;
-    ((u32*)tmp)[3] = ((u32*)res)[21];
-    ((u32*)tmp)[4] = ((u32*)res)[22];
-    ((u32*)tmp)[5] = ((u32*)res)[23];	
+    ((u32*)tmp)[3] = ((u32*)c)[21];
+    ((u32*)tmp)[4] = ((u32*)c)[22];
+    ((u32*)tmp)[5] = ((u32*)c)[23];	
     tmp[3] = 0;
     tmp[4] = 0;
     tmp[5] = 0;
 
-    carry+=add(ecc->wordLen, c, tmp, c);
+    carry += add(6, res, tmp, res);
 
     // D_1
-    ((u32*)tmp)[0] = ((u32*)res)[23];
-    ((u32*)tmp)[1] = ((u32*)res)[12];
-    ((u32*)tmp)[2] = ((u32*)res)[13];
-    ((u32*)tmp)[3] = ((u32*)res)[14];
-    ((u32*)tmp)[4] = ((u32*)res)[15];
-    ((u32*)tmp)[5] = ((u32*)res)[16];
-    ((u32*)tmp)[6] = ((u32*)res)[17];
-    ((u32*)tmp)[7] = ((u32*)res)[18];
-    ((u32*)tmp)[8] = ((u32*)res)[19];
-    ((u32*)tmp)[9] = ((u32*)res)[20];
-    ((u32*)tmp)[10] = ((u32*)res)[21];
-    ((u32*)tmp)[11] = ((u32*)res)[22];
+    ((u32*)tmp)[0] = ((u32*)c)[23];
+    ((u32*)tmp)[1] = ((u32*)c)[12];
+    ((u32*)tmp)[2] = ((u32*)c)[13];
+    ((u32*)tmp)[3] = ((u32*)c)[14];
+    ((u32*)tmp)[4] = ((u32*)c)[15];
+    ((u32*)tmp)[5] = ((u32*)c)[16];
+    ((u32*)tmp)[6] = ((u32*)c)[17];
+    ((u32*)tmp)[7] = ((u32*)c)[18];
+    ((u32*)tmp)[8] = ((u32*)c)[19];
+    ((u32*)tmp)[9] = ((u32*)c)[20];
+    ((u32*)tmp)[10] = ((u32*)c)[21];
+    ((u32*)tmp)[11] = ((u32*)c)[22];
 
-    carry-=sub(ecc->wordLen, c, tmp, c);
+    carry -= sub(6, res, tmp, res);
 
     // D_2
     ((u32*)tmp)[0] = 0;
-    ((u32*)tmp)[1] = ((u32*)res)[20];
-    ((u32*)tmp)[2] = ((u32*)res)[21];
-    ((u32*)tmp)[3] = ((u32*)res)[22];
-    ((u32*)tmp)[4] = ((u32*)res)[23];
+    ((u32*)tmp)[1] = ((u32*)c)[20];
+    ((u32*)tmp)[2] = ((u32*)c)[21];
+    ((u32*)tmp)[3] = ((u32*)c)[22];
+    ((u32*)tmp)[4] = ((u32*)c)[23];
     ((u32*)tmp)[5] = 0;
     tmp[3] = 0;
     tmp[4] = 0;
     tmp[5] = 0;
     
-    carry-=sub(ecc->wordLen, c, tmp, c);
+    carry -= sub(6, res, tmp, res);
 
     // D_3
     tmp[0] = 0;
     ((u32*)tmp)[2] = 0;
-    ((u32*)tmp)[3] = ((u32*)res)[23];
-    ((u32*)tmp)[4] = ((u32*)res)[23];
+    ((u32*)tmp)[3] = ((u32*)c)[23];
+    ((u32*)tmp)[4] = ((u32*)c)[23];
     ((u32*)tmp)[5] = 0;
     tmp[3] = 0;
     tmp[4] = 0;
     tmp[5] = 0;
     
-    carry-=sub(ecc->wordLen, c, tmp, c);
+    carry -= sub(6, res, tmp, res);
 
-    while(carry>0) //in case of c > 2^256
-    {
-        sub(ecc->wordLen,c,ecc->p,c);
+    while(carry > 0) {
+        sub(6, res, ecc->p, res);
         carry--;
     }
-    while(carry<0) //in case of c<0
-    {
-        add(ecc->wordLen,c,ecc->p,c);
+    while(carry++ < 0) {
+        add(6, res, ecc->p, res);
         carry++;
     }
     //in case of 0<c<p256
-    if(GFCmp(ecc,c,ecc->p)!=-1)
-        sub(ecc->wordLen, c, ecc->p, c);
+    if(GFCmp(ecc, res, ecc->p) != -1)
+        sub(6, res, ecc->p, res);
 }
 
 void GFSqr_FIPS384(const Ec* ecc, const GFElement a, GFElement b) {
     GFMul_FIPS384(ecc, a, a, b);
+}
+
+void GFMul_FIPS521(const Ec* ecc, const GFElement a, const GFElement b, GFElement res) {
+    VeryBigInt c, tmp;
+
+    mul(ecc->wordLen, a, b, c);
+    shr(ecc->wordLen, c, tmp, 521);
+
+    c[8] &= MAX_U64 >> (64-9);
+    tmp[8] &= MAX_U64 >> (64-9);
+
+    add(9, c, tmp, res);
+
+    if ( res[8] & (1 << 9) ) sub(9, res, ecc->p, res);
+}
+
+void GFSqr_FIPS521(const Ec* ecc, const GFElement a, GFElement c) {
+    GFMul_FIPS521(ecc, a, a, c);
+}
+
+void GFMul_Cmn(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
+    mul_mod(ecc->wordLen, a, b, ecc->p, c);
+}
+
+void GFSqr_Cmn(const Ec* ecc, const GFElement a, GFElement c) {
+    GFMul_Cmn(ecc, a, a, c);
 }
 
 void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b) {
@@ -763,6 +835,7 @@ void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b) {
     copy(b, a, ecc->wordLen);
     b[ecc->wordLen] = 0;
     shl(ecc->wordLen, b, b, pp);
+
     if (ecc->bitLen % 64 == 0) {
         carry = b[ecc->wordLen] & ((1<<pp)-1);
         while(carry) {
@@ -771,10 +844,10 @@ void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b) {
         }
     }
     else {
-        carry = b[ ecc->wordLen -1 ] & ((u64)(-1)<<32);
+        carry = b[ ecc->wordLen -1 ] & ((u64)(-1)<< ( ecc->bitLen % 64 ) );
         while(carry) {
             sub(ecc->wordLen, b, ecc->p, b);
-            carry = b[ ecc->wordLen -1 ] & ((u64)(-1)<<32);
+            carry = b[ ecc->wordLen -1 ] & ((u64)(-1)<< (ecc->bitLen % 64) );
         }
     }
 }

@@ -99,7 +99,7 @@ void test_eddsa(u64 bit_len, int isEdwards) {
 }
 
 int main() {
-
+    /*
 	printf("------- Testing EC Arithmetic -------\n");
     test_fips(192, 0);
     test_fips(192, 1);
@@ -109,6 +109,7 @@ int main() {
     test_fips(256, 1);
     test_fips(384, 0);
     test_fips(384, 1);
+    */
 
     printf("------- Testing ECDSA -------\n");
     test_eddsa(192, 0);

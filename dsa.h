@@ -14,6 +14,6 @@ typedef struct {
 
 int EcDsaGenerateKey(Ec* ecc, BigInt key, EcPoint* Q);
 int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signature);
-int EcDsaVerify(const Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature* signature);
+int EcDsaVerify(Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature* signature);
 
 #endif /* DSA_H */

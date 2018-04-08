@@ -8,8 +8,9 @@ typedef unsigned long long u64;
 typedef unsigned u32;
 typedef unsigned char u8;
 
-typedef u64 GFElement[12];
-typedef u64 BigInt[7];
+typedef u64 GFElement[10];
+typedef u64 BigInt[10]; // up to 640 bits
+typedef u64 VeryBigInt[18]; // up to 1152 bits
 
 typedef struct _EcPoint {
     GFElement x;
@@ -33,7 +34,7 @@ typedef void TGFSqrFunc(const Ec*, const GFElement, GFElement);
 #define PRNG_STATE_LEN 256 
 typedef struct {
     unsigned char state[PRNG_STATE_LEN];
-} PRNG;;
+} PRNG;
 
 void PRNGInit(PRNG* generator, unsigned char* seed, int len);
 void PRNGRun(PRNG* generator); 
@@ -67,34 +68,34 @@ typedef Ec EcEd;
 typedef Ec EcW;
 
 
-int  EcEdInit(EcEd* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement d);
-int  EcWInit(EcW* ecc, const EcPoint* bp, u64 bitLen, const BigInt n, const GFElement a, const GFElement b);
+int  EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement d);
+int  EcWInit(EcW* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement a, const GFElement b);
 
 int  EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards);
 
-void EcGenerateBasePoint(const Ec* ecc, EcPoint* bp);
+void EcGenerateBasePoint(Ec* ecc, EcPoint* bp);
 
-int  EcCheckPointInMainSubGroup(const Ec* ecc, const EcPoint* P);
-int  EcCheckPointOnCurve(const Ec* ecc, const EcPoint* P);
+int  EcCheckPointInMainSubGroup(Ec* ecc, const EcPoint* P);
+int  EcCheckPointOnCurve(Ec* ecc, const EcPoint* P);
 
-void EcDump(const Ec* ecc, char* buf);
+void EcDump(Ec* ecc, char* buf);
 
 /* Arithmetic on Elliptic Curves */
-int  EcPointCmp(const Ec* ecc, const EcPoint* A, const EcPoint* B);
-void EcCopy(const Ec* ecc, EcPoint* dest, const EcPoint* src);
-void EcCopyProj(const Ec* ecc, EcPointProj* dest, const EcPointProj* src);
+int  EcPointCmp(Ec* ecc, const EcPoint* A, const EcPoint* B);
+void EcCopy(Ec* ecc, EcPoint* dest, const EcPoint* src);
+void EcCopyProj(Ec* ecc, EcPointProj* dest, const EcPointProj* src);
 
-void EcConvertAffineToProjective(const Ec* ecc, const EcPoint* P, EcPointProj* Q);
-void EcConvertProjectiveToAffine(const Ec* ecc, const EcPointProj* P, EcPoint* Q);
+void EcConvertAffineToProjective(Ec* ecc, const EcPoint* P, EcPointProj* Q);
+void EcConvertProjectiveToAffine(Ec* ecc, const EcPointProj* P, EcPoint* Q);
 
-int EcAdd(const Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
-int EcDouble(const Ec* ecc, const EcPoint* A, EcPoint* B);
+int EcAdd(Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
+int EcDouble(Ec* ecc, const EcPoint* A, EcPoint* B);
 
-int EcAddProj(const Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
-int EcDoubleProj(const Ec* ecc, const EcPointProj* A, EcPointProj* B);
+int EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
+int EcDoubleProj(Ec* ecc, const EcPointProj* A, EcPointProj* B);
 
-int EcScalarMulProj(const Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
-int EcScalarMul(const Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
+int EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
+int EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
 
 
 #endif /* EC_H */
