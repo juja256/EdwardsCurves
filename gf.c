@@ -183,7 +183,7 @@ inline void shr(u64 n, const u64* a, u64* res, u64 bits) {
     }
 }
 
-inline void dump(u64 n, const u64* a) {
+static inline void dump(u64 n, const u64* a) {
     for (int i=n-1; i>=0; i--)
         printf(HEX_FORMAT, a[i]);
     printf("\n");
@@ -209,9 +209,9 @@ void add_mod(u64 n, const BigInt a, const BigInt b, const BigInt m, BigInt res) 
 
 void mul_mod(u64 n, const BigInt a, const BigInt b, const BigInt m, BigInt res) {
     VeryBigInt d;
+    
     mul(n, a, b, d);
-    divide(n, d, m, NULL, d);
-    copy(res, d, n);
+    divide(n, d, m, NULL, res);
     
     /*u64 b_len = bigint_bit_len(n, b);
     BigInt mm, r;
@@ -256,7 +256,7 @@ void imul(u64 n, const u64* a, const u64* b, u64* c) {
 }
 
 void inv_mod(u64 n, const BigInt a, const BigInt m, BigInt res) {
-    VeryBigInt mm;
+    BigInt mm;
     //memset(mm, 0, sizeof(BigInt));
     copy(mm, m, n);
     mm[0] -= 2; 
@@ -287,25 +287,24 @@ void inv_mod(u64 n, const BigInt a, const BigInt m, BigInt res) {
 
 void divide(u64 n, const u64* a, const u64* b, u64* quotient, u64* reminder) {
     VeryBigInt q;
-    VeryBigInt tmp, r;
-    
+    VeryBigInt tmp;
+    VeryBigInt r;
 
     copy(r, a, 2*n);
     zero_int(2*n, q);
+    zero_int(2*n, tmp);
 
     int k = bigint_bit_len(2*n, a);
     int t = bigint_bit_len(n, b);
 
-    //int nb = (t % 64 == 0) ? t / 64 : (t / 64) + 1;
     if (k < t) {
-        //if (quotient) copy(quotient, q, n);
+        if (quotient) copy(quotient, q, 2*n);
         copy(reminder, r, n);
         return;
     }
 
     k = k-t;
     shl(n, b, tmp, k);
-
     while (k >= 0) {
         if (sub(2*n, r, tmp, r) == 0) {
             q[ k/64 ] |= (u64)1 << (k % 64);
