@@ -10,7 +10,7 @@ extern const u64 p224[4];
 extern const u64 p256[4];
 extern const u64 p384[6];
 extern const u64 p521[9];
-extern const u64 zero[9];
+extern const u64 zero[20];
 
 /* Common Arithmetics */
 

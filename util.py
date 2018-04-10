@@ -80,24 +80,34 @@ def main():
         'd': 0x6DBA6A,
     }
     
-    w = get_isomorphic_curve(cur192)
-    print hex(w[0]), hex(w[1])
-    print 'Check Mov:', check_mov(cur192)
 
     # Find 521bit curve
-    d = 3
+    d = 363
     cur521 = {
         'p': 2**521-1,
     }
+    print "finding curve... begin with d =", d
     while True:
         if jakobi_symbol(d, cur521['p']) != 1:
             cur521['d'] = d
             a,b = get_isomorphic_curve(cur521)
             E = EllipticCurve(GF(2**521-1), [0,0,0,a,b])
-            n = E.cardinality()//4
-            if miller_rabine_test(n):
-                cur521['n'] = n
+
+            n = E.cardinality()
+            t = (cur521['p']+1) - n
+            n1 = n//4
+            n2 = ((cur521['p']+1)+t)//4
+            if miller_rabine_test(n1):
+                cur521['n'] = n1
                 print "found curve!"
+                if check_mov(cur521):
+                    print "mov checked, its our curve!"
+                    print cur521['d'], cur521['n']
+                    break
+            elif miller_rabine_test(n2):
+                cur521['n'] = n2
+                cur521['d'] = inv_mod(cur521['d'], cur521['p'])
+                print "found curve! (twisted)"
                 if check_mov(cur521):
                     print "mov checked, its our curve!"
                     print cur521['d'], cur521['n']

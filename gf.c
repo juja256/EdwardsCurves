@@ -19,7 +19,7 @@
 
 const u64 unity[] = { 0x1, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-const u64 zero[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+const u64 zero[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  };
 
 const EcPoint uP  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0} };
 
@@ -143,7 +143,6 @@ inline void shl(u64 n, const u64* a, u64* res, u64 bits) {
             res[i+chk] = (cur << bits) ^ buf;
             buf = (cur & (MAX_U64 << ( 64-bits ))) >> ( 64-bits );
         }
-        //res[chk] &= (MAX_U64 << bits);
     }
     else {
         for (int i = 0; i < n; i++) {
@@ -170,7 +169,6 @@ inline void shr(u64 n, const u64* a, u64* res, u64 bits) {
             res[i-chk] = (cur >> bits) ^ buf;
             buf = (cur & (MAX_U64 >> ( 64-bits ))) << (64 - bits);
         }
-        //res[n-1] &= MAX_U64 >> (64-bits);
     }
     else {
         for (int i = n-1+chk; i >= chk; i--) {
@@ -208,12 +206,14 @@ void add_mod(u64 n, const BigInt a, const BigInt b, const BigInt m, BigInt res) 
 }
 
 void mul_mod(u64 n, const BigInt a, const BigInt b, const BigInt m, BigInt res) {
+    /* new multiplication with reduction by division */
     VeryBigInt d;
-    
     mul(n, a, b, d);
     divide(n, d, m, NULL, res);
     
-    /*u64 b_len = bigint_bit_len(n, b);
+    /* old multiplication using only additions */
+    /*
+    u64 b_len = bigint_bit_len(n, b);
     BigInt mm, r;
     zero_int(n, r);
     
@@ -222,8 +222,8 @@ void mul_mod(u64 n, const BigInt a, const BigInt b, const BigInt m, BigInt res) 
         if (get_bit(b, i)) add_mod(n, r, mm, m, r);
         add_mod(n, mm, mm, m, mm);
     }
-    copy(res, r, n);*/
-    
+    copy(res, r, n);
+    */    
 }
 
 void exp_mod(u64 n, const BigInt a, const BigInt p, const BigInt m, BigInt res) {
@@ -244,29 +244,34 @@ void imul(u64 n, const u64* a, const u64* b, u64* c) {
     int b_isneg = b[n] & MSB_M;
     BigInt bb;
     if (b_isneg) {
-        sub(n, zero, b, bb);
+        sub(n+1, zero, b, bb);
     }
     else {
-        copy(bb, b, n);
+        copy(bb, b, n+1);
     }
-    mul(n, a, bb, c);
+    
+    mul(n+1, a, bb, c);
+    
     if (b_isneg) {
         sub(2*n, zero, c, c);
     }
 }
 
 void inv_mod(u64 n, const BigInt a, const BigInt m, BigInt res) {
+    /* Old realization of inversion using powering to p-2 */
+    /*
     BigInt mm;
-    //memset(mm, 0, sizeof(BigInt));
     copy(mm, m, n);
     mm[0] -= 2; 
     exp_mod(n, a, mm, m, res);
+    */
 
-    /* Compute a^{-1} mod m with Extended Euclidean Algorithm 
-    VeryBigInt q;
-    BigInt t, r, newt, newr, tmp;
-    zero_int(n, t); // t := 0
-    zero_int(n, newt); newt[0] = 1; // newt := 1
+    /* Compute a^{-1} mod m with Extended Euclidean Algorithm */
+    VeryBigInt q, tmp, r;
+    BigInt t, newt, newr;
+    zero_int(2*n, r);
+    zero_int(n+1, t); // t := 0
+    zero_int(n+1, newt); newt[0] = 1; // newt := 1
     copy(r, m, n); // r := m
     copy(newr, a, n); // newr := a
 
@@ -274,15 +279,20 @@ void inv_mod(u64 n, const BigInt a, const BigInt m, BigInt res) {
         divide(n, r, newr, q, tmp); // q := r div newr, tmp := r mod newr
         copy(r, newr, n); // r := newr
         copy(newr, tmp, n); // newr := tmp 
-        imul(n, q, newt, q); // q := q*newt
-        sub(n+1, t, q, tmp); // tmp := t - q
+
+        imul(n, q, newt, tmp); // tmp := q*newt
+
+        sub(n+1, t, tmp, tmp); // tmp := t - tmp
         copy(t, newt, n+1);
         copy(newt, tmp, n+1);
     }
-    copy(res, t, n);
-    if (res[n] & MSB_M) {
-        sub(n, res, m, res);
-    }*/
+    
+    if (t[n] & MSB_M) {
+        add(n, t, m, res);
+    }
+    else {
+        copy(res, t, n);
+    }
 }
 
 void divide(u64 n, const u64* a, const u64* b, u64* quotient, u64* reminder) {
@@ -866,7 +876,11 @@ void GFPow(const Ec* ecc, const GFElement a, const BigInt n, GFElement b) {
 }
 
 void GFInv(const Ec* ecc, const GFElement a, GFElement b) {
-    GFPow(ecc, a, ecc->p_min_two, b);
+    /* 
+    GFPow(ecc, a, ecc->p_min_two, b); 
+    */
+    /* inv_mod(Euclidean alg.) works slightly better than powering */
+    inv_mod(ecc->wordLen, a, ecc->p, b);
 }
 
 void GFMul(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
