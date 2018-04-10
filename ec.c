@@ -29,8 +29,6 @@ void BaseEcInit(Ec* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const Bi
     memset(ecc->p, 0, sizeof(BigInt));
     memset(ecc->n, 0, sizeof(BigInt));
     copy(ecc->n, n, ecc->wordLen);
-    copy(ecc->BasePoint.x, bp->x, ecc->wordLen);
-    copy(ecc->BasePoint.y, bp->y, ecc->wordLen);
 
     ecc->GFMul = GFMul_Cmn;
     ecc->GFSqr = GFSqr_Cmn;
@@ -66,22 +64,30 @@ void BaseEcInit(Ec* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const Bi
     srand(time(NULL));
     seed[0] = rand();
     PRNGInit(&(ecc->prng), seed, 4);
+
+    if (bp != NULL) {
+        copy(ecc->BasePoint.x, bp->x, ecc->wordLen);
+        copy(ecc->BasePoint.y, bp->y, ecc->wordLen);
+    }
+    else {
+        EcGenerateBasePoint(ecc, &(ecc->BasePoint));
+    }
 }
 
 int EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement d) {
-    BaseEcInit(ecc, bitLen, p, bp, n);
     ecc->isEdwards = 1;
-    ecc->cofactor = 4; // Cofactor = 4 for all full Edwards curves
     copy(ecc->d, d, ecc->wordLen);
+    ecc->cofactor = 4; // Cofactor = 4 for all full Edwards curves
+    BaseEcInit(ecc, bitLen, p, bp, n);
     return 0;
 }
 
 int EcWInit(EcW* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement a, const GFElement b) {   
-    BaseEcInit(ecc, bitLen, p, bp, n);
     ecc->isEdwards = 0;
     ecc->cofactor = 1; // Cofactor = 1 for all NIST Recommended curves with a = -3
     copy(ecc->a, a, ecc->wordLen);
     copy(ecc->b, b, ecc->wordLen);
+    BaseEcInit(ecc, bitLen, p, bp, n);
     return 0;
 }
 
@@ -624,6 +630,12 @@ int EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards) {
             GFInitFromString(G.x, "1FC0E8E61F599813E376D11F7510D77F177C2F1CDE19FD14D63A2EC5EAD4D0DED1BD06676CCF365243BF3C0675A31B62");
             GFInitFromString(G.y, "F52B4FA352B257D7A102FA45C56A50CCBDB3DEC053D5610EDBD0188C11F321F28A43E2FC50395E4A8BD0029AE71D51AA");
             break;
+            case 521:
+            GFInitFromString(p, "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+            GFInitFromString(n,  "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF46087BC4A294FCC80B3F45D8CEBFB21479BA651BA07DE913AD1D8392DE3FF8AF");
+            GFInitFromString(d, "16A");
+            return EcEdInit(ecc, bitLen, p, NULL, n, d);
+      
             default:
             return -1;
         }
@@ -664,6 +676,13 @@ int EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards) {
             GFInitFromString(b, "B3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF");
             GFInitFromString(G.x, "AA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B9859F741E082542A385502F25DBF55296C3A545E3872760AB7");
             GFInitFromString(G.y, "3617DE4A96262C6F5D9E98BF9292DC29F8F41DBD289A147CE9DA3113B5F0B8C00A60B1CE1D7E819D7A431D7C90EA0E5F");
+            case 521:
+            GFInitFromString(p,   "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+            GFInitFromString(n,   "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409");
+            GFInitFromString(a,   "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC");
+            GFInitFromString(b,   "051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00");
+            GFInitFromString(G.x,  "C6858E06B70404E9CD9E3ECB662395B4429C648139053FB521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B3C1856A429BF97E7E31C2E5BD66");
+            GFInitFromString(G.y, "11839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650");
             break;
             default:
             return -1;

@@ -1,5 +1,5 @@
 GXX:= gcc
-CFLAGS:= -no-pie -O
+CFLAGS:= -no-pie -g
 
 all: test
 
