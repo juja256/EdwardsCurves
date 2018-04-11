@@ -389,7 +389,7 @@ void GFInitFromString(GFElement a, const char* str) {
     u64 s_len = strlen(str);
     u64 tmp;
 
-    memset(a, 0, 8*6);
+    memset(a, 0, sizeof(GFElement));
 
     for (int i = s_len-1; i >= 0; i--) {
         if ((str[i] >= '0') && (str[i] <= '9')) { // 0,1,2,...
@@ -445,9 +445,11 @@ void GFAdd(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
         case 521: {
             add(ecc->wordLen, a, b, c);
             carry = (c[ecc->wordLen - 1] & ((u64)1 << 9));
-            if (carry) {
+            /*if (carry) {
                 sub(ecc->wordLen, c, ecc->p, c);
-            }
+            }*/
+            if(GFCmp(ecc, c, ecc->p) != -1)
+                sub(ecc->wordLen, c, ecc->p, c);
             break;
         }
     }
@@ -824,7 +826,9 @@ void GFMul_FIPS521(const Ec* ecc, const GFElement a, const GFElement b, GFElemen
 
     add(9, c, tmp, res);
 
-    if ( res[8] & (1 << 9) ) sub(9, res, ecc->p, res);
+    //if ( res[8] & (1 << 9) ) sub(9, res, ecc->p, res);
+    if(GFCmp(ecc, res, ecc->p) != -1)
+        sub(9, res, ecc->p, res);
 }
 
 void GFSqr_FIPS521(const Ec* ecc, const GFElement a, GFElement c) {
@@ -861,6 +865,17 @@ void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b) {
     }
 }
 
+void GFMulByD(const EcEd* ecc, GFElement a) {
+    if (ecc->d_len < 64) {
+        VeryBigInt t;
+        mul_by_word(ecc->wordLen, a, ecc->d[0], t);
+        divide(ecc->wordLen, t, ecc->p, NULL, a);
+    }
+    else {
+        GFMul(ecc, a, ecc->d, a);
+    }
+}
+
 void GFPow(const Ec* ecc, const GFElement a, const BigInt n, GFElement b) {
     GFElement tmp, tmp2;
     copy(tmp, a, ecc->wordLen);
@@ -876,9 +891,8 @@ void GFPow(const Ec* ecc, const GFElement a, const BigInt n, GFElement b) {
 }
 
 void GFInv(const Ec* ecc, const GFElement a, GFElement b) {
-    /* 
-    GFPow(ecc, a, ecc->p_min_two, b); 
-    */
+    //GFPow(ecc, a, ecc->p_min_two, b); 
+    
     /* inv_mod(Euclidean alg.) works slightly better than powering */
     inv_mod(ecc->wordLen, a, ecc->p, b);
 }

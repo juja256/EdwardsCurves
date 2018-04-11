@@ -22,7 +22,7 @@ double GetTickCount(void)
 
 
 
-void test_fips(u64 bit_len, int isEdwards) {
+void test_ariphmetic(u64 bit_len, int isEdwards) {
     Ec cur;
     EcPoint G, H, Z;
     EcPointProj B, A;
@@ -101,18 +101,18 @@ void test_eddsa(u64 bit_len, int isEdwards) {
 int main() {
     
 	printf("------- Testing EC Arithmetic -------\n");
-    /*test_fips(192, 0);
-    test_fips(192, 1);
-    test_fips(224, 0);
-    test_fips(224, 1);
-    test_fips(256, 0);
-    test_fips(256, 1);
-    test_fips(384, 0);
-    test_fips(384, 1);*/
-    test_fips(521, 0);
-    
+    test_ariphmetic(192, 0);
+    test_ariphmetic(192, 1);
+    test_ariphmetic(224, 0);
+    test_ariphmetic(224, 1);
+    test_ariphmetic(256, 0);
+    test_ariphmetic(256, 1);
+    test_ariphmetic(384, 0);
+    test_ariphmetic(384, 1);
+    test_ariphmetic(521, 0);
+    test_ariphmetic(521, 1);
 
-    /*printf("------- Testing ECDSA -------\n");
+    printf("------- Testing ECDSA -------\n");
     test_eddsa(192, 0);
     test_eddsa(192, 1);
     test_eddsa(224, 0);
@@ -120,7 +120,9 @@ int main() {
     test_eddsa(256, 0);
     test_eddsa(256, 1);
     test_eddsa(384, 0);
-    test_eddsa(384, 1);*/
+    test_eddsa(384, 1);
+    test_eddsa(521, 0);
+    test_eddsa(521, 1);
     #ifdef _WIN64
     system("pause");
     #endif

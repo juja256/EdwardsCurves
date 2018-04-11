@@ -58,7 +58,7 @@ typedef struct _Ec {
     EcPoint BasePoint;
 
     BigInt p;
-    BigInt p_min_two;
+    u64 d_len;
     
     TGFMulFunc* GFMul;
     TGFSqrFunc* GFSqr;

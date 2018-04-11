@@ -7,10 +7,26 @@ def check_point_on_curve(cur, x, y):
 def inv_mod(a ,n):
     return pow(a, n-2, n)
 
+def sqrt_mod(a, n):
+    k = (n-3)//4 # for n=4k+3 only!
+    return pow(a, k+1, n)
+
+def jakobi_symbol(n, p):
+    return pow(n, (p-1)/2, p)
+
 def get_isomorphic_curve(cur):
     d = cur['d']
     p = cur['p']
     return ( ((-(1 + 14*d + d**2 ) % p) * inv_mod(48, p)) % p, ((-(1 - 33*d - 33 * d**2 + d**3) % p) * inv_mod(864, p)) % p )
+
+def get_base_point(cur):
+    # x**2 + y**2 = 1 + d * x**2 * y**2
+    while True:
+        x = rd.randint(1, cur['p'])
+        y_2 = (1-x**2 % cur['p']) * inv_mod(1- cur['d']*x**2, cur['p']) % cur['p']
+        if jakobi_symbol(y_2, cur['p']) == 1:
+            return x, sqrt_mod(y_2, cur['p'])
+
 
 def check_mov(cur):
     n = cur['n']
@@ -21,8 +37,7 @@ def check_mov(cur):
             return False
     return True
 
-def jakobi_symbol(n, p):
-    return pow(n, (p-1)/2, p)
+
 
 K = 10
 
@@ -71,18 +86,9 @@ def miller_rabine_test(n):
                 return False
     return True
 
-def main():
-    cur192 = {
-        'p': 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF,
-        'x': 0x44F083BB00E51AD91A2743284D31F57EE5C84826FCC91F4B,
-        'y': 0x15FC16E5870524E0DBBE9EC8BB9F066C02A02B1978D4E029,
-        'n': 0x3FFFFFFFFFFFFFFFFFFFFFFFEA75D4027230DD4DFFDB0455,
-        'd': 0x6DBA6A,
-    }
-    
-
+def find521curve(d):
     # Find 521bit curve
-    d = 363
+    
     cur521 = {
         'p': 2**521-1,
     }
@@ -103,6 +109,7 @@ def main():
                 if check_mov(cur521):
                     print "mov checked, its our curve!"
                     print cur521['d'], cur521['n']
+                    print get_base_point(cur521)
                     break
             elif miller_rabine_test(n2):
                 cur521['n'] = n2
@@ -111,6 +118,7 @@ def main():
                 if check_mov(cur521):
                     print "mov checked, its our curve!"
                     print cur521['d'], cur521['n']
+                    print get_base_point(cur521)
                     break
             else:
                 print "curve is not appropriate, skip", d
@@ -118,6 +126,22 @@ def main():
                 
         else:
             d += 1
+
+def main():
+    cur521 = {
+        'd': 0x16a,
+        'n': 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff46087bc4a294fcc80b3f45d8cebfb21479ba651ba07de913ad1d8392de3ff8af,
+        'p': 2**521 - 1
+    }
+    x, y = get_base_point(cur521)
+    if check_point_on_curve(cur521, x, y):
+        print hex(x), hex(y)
+    else:
+        print "smth gone wrong"
+    
+    find521curve(609)
+
+    
 
 if __name__ == '__main__':
     main()
