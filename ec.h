@@ -76,7 +76,6 @@ typedef struct _Ec {
     EcPoint BasePoint;
 
     BigInt p;
-    u64 d_len;
     u64 curve_id;
     
     TGFMulFunc* GFMul;

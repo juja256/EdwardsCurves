@@ -105,7 +105,6 @@ int EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const Big
     BaseEcInit(ecc, bitLen, p, bp, n);
     
     copy(ecc->d, d, ecc->wordLen);
-    ecc->d_len = bigint_bit_len(ecc->wordLen, d);
     return 0;
 }
 
