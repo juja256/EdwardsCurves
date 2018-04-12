@@ -6,64 +6,6 @@
 #include <string.h>
 #include <stdio.h>
 
-/* Magic 2048bit Number M=pq:
-0x82780CC55BAE0479B0F478FE1F648D21180C71EF09655F1103F21B98765A4A926034967321666C59056461D85616746BAF309D393692C7EBCE285DCC5F865868E0C9F2048DFD87240229B039BAA07BE52FCBBFF95DF7E8BD2189A00B3D4832510D15BE80354A6560CED52426F7404EBCC3285392E894037FB02B01B19E47CDAA2DD029EC78A56963EDF8A6EA9E670F964E96C3ED6912DB8EBDCDC8E959F36ECF37CD464B9153D2FDD2EAA12E5982B0A33B448F290FA31868FE48BFF5339C9AC8697A2C040AF823922AD9EB9807E45912EBDDD15BB5AD3AB04C21C8774E41D42486ABFDC7EECC392FE0629372B63A4334AA23A2F721F7AF131201E43B9CE2C787 
-*/
-static const u64 M[] = { 
-0x1201e43b9ce2c787,
-0xaa23a2f721f7af13,
-0xe0629372b63a4334,
-0x86abfdc7eecc392f,
-0x4c21c8774e41d424,
-0xebddd15bb5ad3ab0,
-0x2ad9eb9807e45912,
-0x697a2c040af82392,
-0xfe48bff5339c9ac8,
-0x3b448f290fa31868,
-0xd2eaa12e5982b0a3,
-0x37cd464b9153d2fd,
-0xbdcdc8e959f36ecf,
-0x4e96c3ed6912db8e,
-0xedf8a6ea9e670f96,
-0x2dd029ec78a56963,
-0xb02b01b19e47cdaa,
-0xc3285392e894037f,
-0xced52426f7404ebc,
-0xd15be80354a6560,
-0x2189a00b3d483251,
-0x2fcbbff95df7e8bd,
-0x229b039baa07be5,
-0xe0c9f2048dfd8724,
-0xce285dcc5f865868,
-0xaf309d393692c7eb,
-0x56461d85616746b,
-0x6034967321666c59,
-0x3f21b98765a4a92,
-0x180c71ef09655f11,
-0xb0f478fe1f648d21,
-0x82780cc55bae0479
- };
-
-void PRNGInit(PRNG* generator, unsigned char* seed, int seed_len) {
-    memcpy( generator->state, seed, seed_len );
-    srand(time(NULL));
-    generator->state[0] = 1;
-    PRNGRun(generator);
-}
-
-void PRNGRun(PRNG* generator) {
-    generator->state[0] ^= 1;
-}
-
-void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest) {
-    int w = (bit_len % 64 == 0) ? bit_len/64 : bit_len/64+1; 
-    memset(dest, 0, w*8);
-    for (int i=0; i<bit_len; i++) {
-        PRNGRun(generator);
-        dest[i/8] ^= ( generator->state[0] & 1 ) << (i%8);
-    }
-}
-
 int EcDsaGenerateKey(Ec* ecc, BigInt key, EcPoint* Q) {
     EcPointProj Q_p;
 
@@ -138,8 +80,6 @@ int EcDsaVerify(Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature*
         GFSub(ecc, v, ecc->n, v);
     } // v = P.x mod n
 
-    printf("v: ");
-    GFDump(ecc, v);
     /* v =? r */
     if ( GFCmp( ecc, v, signature->r ) != 0 ) return VER_BROKEN_SIGNATURE;
     return VER_OK;

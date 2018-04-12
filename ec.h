@@ -25,6 +25,9 @@ typedef struct _EcPointProj {
 } EcPointProj;
 
 typedef int BOOL;
+#define TRUE 1
+#define FALSE 0
+
 typedef struct _Ec Ec;
 
 typedef void TGFAddFunc(const Ec*, const GFElement, const GFElement, GFElement);
@@ -46,6 +49,21 @@ void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest);
    or in Weierstrass form:
     y^2 = x^3 + a*x + b 
 */
+
+#define ED_192 0xE192
+#define ED_224 0xE224
+#define ED_256 0xE256
+#define ED_384 0xE384
+#define ED_521 0xE521
+#define ED_NOT_STANDARD 0xE000
+
+#define FIPS_192 0xF192
+#define FIPS_224 0xF224
+#define FIPS_256 0xF256
+#define FIPS_384 0xF384
+#define FIPS_521 0xF521
+#define FIPS_NOT_STANDARD 0xF000
+
 typedef struct _Ec {
     GFElement d, a, b;
     BOOL isEdwards;
@@ -59,6 +77,7 @@ typedef struct _Ec {
 
     BigInt p;
     u64 d_len;
+    u64 curve_id;
     
     TGFMulFunc* GFMul;
     TGFSqrFunc* GFSqr;

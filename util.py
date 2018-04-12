@@ -139,7 +139,7 @@ def main():
     else:
         print "smth gone wrong"
     
-    find521curve(609)
+    find521curve(750)
 
     
 

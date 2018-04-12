@@ -6,6 +6,26 @@
 #include <string.h>
 #include <stdio.h>
 
+void PRNGInit(PRNG* generator, unsigned char* seed, int seed_len) {
+    memcpy( generator->state, seed, seed_len );
+    srand(time(NULL));
+    generator->state[0] = 1;
+    PRNGRun(generator);
+}
+
+void PRNGRun(PRNG* generator) {
+    generator->state[0] ^= 1;
+}
+
+void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest) {
+    int w = (bit_len % 64 == 0) ? bit_len/64 : bit_len/64+1; 
+    memset(dest, 0, w*8);
+    for (int i=0; i<bit_len; i++) {
+        PRNGRun(generator);
+        dest[i/8] ^= ( generator->state[0] & 1 ) << (i%8);
+    }
+}
+
 int EcPointCmp(Ec* ecc, const EcPoint* A, const EcPoint* B) {
     return GFCmp(ecc, A->x, B->x) || GFCmp(ecc, A->y, B->y);
 }
@@ -35,25 +55,37 @@ void BaseEcInit(Ec* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const Bi
 
     copy(ecc->p, p, ecc->wordLen);
 
+    
+    if (ecc->isEdwards) {
+        ecc->curve_id = ED_NOT_STANDARD;
+    }
+    else {
+        ecc->curve_id = FIPS_NOT_STANDARD;
+    }
     if (GFCmp(ecc, ecc->p, p192) == 0) {
         ecc->GFMul = GFMul_FIPS192;
         ecc->GFSqr = GFSqr_FIPS192;
+        ecc->curve_id |= 0x192;
     }
     else if (GFCmp(ecc, ecc->p, p224) == 0) {
         ecc->GFMul = GFMul_FIPS224;
         ecc->GFSqr = GFSqr_FIPS224;
+        ecc->curve_id |= 0x224;
     }
     else if (GFCmp(ecc, ecc->p, p256) == 0) {
         ecc->GFMul = GFMul_FIPS256;
         ecc->GFSqr = GFSqr_FIPS256;
+        ecc->curve_id |= 0x256;
     }
     else if (GFCmp(ecc, ecc->p, p384) == 0) {
         ecc->GFMul = GFMul_FIPS384;
         ecc->GFSqr = GFSqr_FIPS384;
+        ecc->curve_id |= 0x384;
     }
     else if (GFCmp(ecc, ecc->p, p521) == 0) {
         ecc->GFMul = GFMul_FIPS521;
         ecc->GFSqr = GFSqr_FIPS521;
+        ecc->curve_id |= 0x521;
     }
 
     unsigned char seed[4];
@@ -69,18 +101,17 @@ void BaseEcInit(Ec* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const Bi
 }
 
 int EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement d) {
-    BaseEcInit(ecc, bitLen, p, bp, n);
     ecc->isEdwards = 1;
-    ecc->cofactor = 4; // Cofactor = 4 for all full Edwards curves
+    BaseEcInit(ecc, bitLen, p, bp, n);
+    
     copy(ecc->d, d, ecc->wordLen);
     ecc->d_len = bigint_bit_len(ecc->wordLen, d);
     return 0;
 }
 
 int EcWInit(EcW* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement a, const GFElement b) {  
-    BaseEcInit(ecc, bitLen, p, bp, n); 
     ecc->isEdwards = 0;
-    ecc->cofactor = 1; // Cofactor = 1 for all NIST Recommended curves with a = -3
+    BaseEcInit(ecc, bitLen, p, bp, n); 
     copy(ecc->a, a, ecc->wordLen);
     copy(ecc->b, b, ecc->wordLen);
     
