@@ -3,6 +3,11 @@
 
 #include "ec.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 extern const u64 unity[9];
 extern const EcPoint uP;
 extern const u64 p192[3];
@@ -70,5 +75,9 @@ void GFSqr_FIPS224(const Ec* ecc, const GFElement a, GFElement c);
 void GFSqr_FIPS256(const Ec* ecc, const GFElement a, GFElement c);
 void GFSqr_FIPS384(const Ec* ecc, const GFElement a, GFElement c);
 void GFSqr_FIPS521(const Ec* ecc, const GFElement a, GFElement c);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GF_H */

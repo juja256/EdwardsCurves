@@ -1,6 +1,10 @@
 #ifndef EC_H
 #define EC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define NORMAL_POINT 1
 #define INFINITY_POINT 0
 
@@ -116,5 +120,8 @@ int EcDoubleProj(Ec* ecc, const EcPointProj* A, EcPointProj* B);
 int EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
 int EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EC_H */
