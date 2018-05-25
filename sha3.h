@@ -1,6 +1,11 @@
 #ifndef SHA3_H
 #define SHA3_H
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef unsigned char BYTE;
 
 typedef unsigned long long KeccakState[25];
@@ -15,7 +20,7 @@ typedef struct {
     RoundFunc* keccak_p;
 } KeccakSpoonge;
 
-typedef KeccakSpoonge SHA3State;
+typedef KeccakSpoonge Sha3Engine;
 
 void Keccak_theta( KeccakState* state);
 void Keccak_rho(KeccakState* state);
@@ -28,10 +33,17 @@ void SpoongeInit( KeccakSpoonge* spoonge, int capacity, int rate, RoundFunc* rnd
 void SpoongeAbsorb( KeccakSpoonge* spoonge, BYTE* inBuf, unsigned size );
 void SpoongeSqueeze( KeccakSpoonge* spoonge, BYTE* outBuf, unsigned size );
 
-void SHA3Init( SHA3State* state, unsigned digestSize);
-void SHA3Update( SHA3State* state, BYTE inBuf, unsigned size );
-void SHA3Final( SHA3State* state, BYTE inBuf, unsigned size );
-void SHA3GetDigest( SHA3State* state, BYTE* digest );
-void SHA3Sum( unsigned digestSize, BYTE* inBuf, unsigned size, BYTE* digest );
+#define INVALID_HASH_LEN -1
+#define INIT_SUCCESS 0;
+
+int SHA3Init( Sha3Engine* state, unsigned digestSize);
+void SHA3Update( Sha3Engine* state, BYTE* inBuf, unsigned size );
+void SHA3Final( Sha3Engine* state, BYTE* inBuf, unsigned size );
+void SHA3GetDigest( Sha3Engine* state, BYTE* digest );
+int SHA3Sum( unsigned digestSize, BYTE* inBuf, unsigned size, BYTE* digest );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
