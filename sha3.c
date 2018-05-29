@@ -5,9 +5,11 @@
 #define w 64
 #define WORD unsigned long long
 
-static inline void xor(BYTE* acc, BYTE* other, unsigned size) {
-    for (unsigned i=0; i<size; i++) {
-        acc[i] ^= other[i];
+static inline void xor(BYTE* acc, const BYTE* other, unsigned size) {
+    WORD* acc_ = (WORD*)acc;
+    WORD* other_ = (WORD*)other;
+    for (unsigned i=0; i<size/8; i++) {
+        acc_[i] ^= other_[i];
     }
 }
 
@@ -23,7 +25,7 @@ static void dump(KeccakState st) {
 #define A(x,y,z) (( (*state)[5*(y)+(x)] & (1 << (z))) >> (z)) 
 #define Parity(x,z) (A(x, 0, z) ^ A(x, 1, z) ^ A(x, 2, z) ^ A(x, 3, z) ^ A(x, 4, z))
 #define Axor(x,y,z,b) (*state)[5*(y)+(x)] ^= ((b) << (z))
-#define Mod(x,n) ( (x < 0) ? (x+n) : (x%n) )
+#define Mod(x,n) ( x%n )
 #define Lane(x, y) (*state)[5*(y)+(x)]
 
 
@@ -76,17 +78,18 @@ void Keccak_theta(KeccakState* state) {
 }
 
 void Keccak_rho(KeccakState* state) {
-    for (int x=0; x<5; x++) {
-        for (int y=0; y<5; y++) {
-            Lane(x,y) = ROT_L( Lane(x,y), rho_offsets[x][y]); 
+    for (int y=0; y<5; y++) {
+        for (int x=0; x<5; x++) {
+            Lane(x,y) = ROT_L( Lane(x,y), rho_offsets[y][x]); 
         }
     }
 }
 
 void Keccak_pi(KeccakState* state) {
     static KeccakState state_tmp;
-    for (int x=0; x<5; x++) {
-        for (int y=0; y<5; y++) {
+    
+    for (int y=0; y<5; y++) {
+        for (int x=0; x<5; x++) {
             state_tmp[x+5*y] = Lane( Mod( (x+3*y), 5), x );
         }
     }
@@ -116,15 +119,47 @@ void Keccak_iota(KeccakState* state, int rnd) {
 }
 
 void Keccak_p( KeccakState* state ) {
-    for (int i=0; i<24; i++) {
+    WORD C[5];
+    WORD D[5];
+    for (int rnd=0; rnd<24; rnd++) {
+        /* theta */
+        C[0] = Lane(0, 0) ^ Lane(0, 1) ^ Lane(0, 2) ^ Lane(0, 3) ^ Lane(0, 4);
+        C[1] = Lane(1, 0) ^ Lane(1, 1) ^ Lane(1, 2) ^ Lane(1, 3) ^ Lane(1, 4);
+        C[2] = Lane(2, 0) ^ Lane(2, 1) ^ Lane(2, 2) ^ Lane(2, 3) ^ Lane(2, 4);
+        C[3] = Lane(3, 0) ^ Lane(3, 1) ^ Lane(3, 2) ^ Lane(3, 3) ^ Lane(3, 4);
+        C[4] = Lane(4, 0) ^ Lane(4, 1) ^ Lane(4, 2) ^ Lane(4, 3) ^ Lane(4, 4);
+
+        D[0] = C[4] ^ ROT_L( C[1], 1 );
+        D[1] = C[0] ^ ROT_L( C[2], 1 );
+        D[2] = C[1] ^ ROT_L( C[3], 1 );
+        D[3] = C[2] ^ ROT_L( C[4], 1 );
+        D[4] = C[3] ^ ROT_L( C[0], 1 );
+    
+        for (int y=0; y<5; y++) {
+            for (int x=0; x<5; x++) {
+                Lane(x, y) ^= D[x];
+            }
+        }
         
-        Keccak_theta(state);
-        //printf("\ntheta ");
-        //dump(*state);
-        Keccak_rho(state);
-        Keccak_pi(state);
-        Keccak_chi(state);
-        Keccak_iota(state, i);
+        /* rho and pi */
+        static KeccakState state_tmp;
+        for (int y=0; y<5; y++) {
+            for (int x=0; x<5; x++) {
+                state_tmp[x+5*y] = ROT_L( Lane( Mod( (x+3*y), 5), x ), rho_offsets[x][Mod( (x+3*y), 5)]); 
+            }
+        }
+
+        /* chi  */
+        for (int y=0; y<5; y++) {
+            Lane(0, y) = state_tmp[0 + 5*y] ^ (~state_tmp[1 + 5*y]) & state_tmp[2 + 5*y];
+            Lane(1, y) = state_tmp[1 + 5*y] ^ (~state_tmp[2 + 5*y]) & state_tmp[3 + 5*y];
+            Lane(2, y) = state_tmp[2 + 5*y] ^ (~state_tmp[3 + 5*y]) & state_tmp[4 + 5*y];
+            Lane(3, y) = state_tmp[3 + 5*y] ^ (~state_tmp[4 + 5*y]) & state_tmp[0 + 5*y];
+            Lane(4, y) = state_tmp[4 + 5*y] ^ (~state_tmp[0 + 5*y]) & state_tmp[1 + 5*y];
+        }
+
+        /* iota */
+        Lane(0,0) ^= RC[rnd];
     }
 }
 
@@ -136,12 +171,12 @@ void SpoongeInit( KeccakSpoonge* spoonge, int capacity, int rate, RoundFunc* rnd
     for (int i=0; i<25; i++) spoonge->state[i] = 0;
 }
 
-void SpoongeAbsorb( KeccakSpoonge* spoonge, BYTE* inBuf, unsigned size ) {
-    
+void SpoongeAbsorb( KeccakSpoonge* spoonge, const BYTE* inBuf, unsigned size ) {
     int delayedSize = (size < spoonge->r - spoonge->delayed) ? size : spoonge->r - spoonge->delayed;
     BYTE* statePtr = (BYTE*)spoonge->state;
     
-    xor(statePtr + spoonge->delayed, inBuf, delayedSize);
+    for (int i=0; i<delayedSize; i++) statePtr[spoonge->delayed+i] ^= inBuf[i];
+
     size -= delayedSize;
     inBuf += delayedSize;
 
@@ -160,9 +195,9 @@ void SpoongeAbsorb( KeccakSpoonge* spoonge, BYTE* inBuf, unsigned size ) {
         spoonge->keccak_p(&spoonge->state);
     }
 
-    inBuf += size;
-    xor(statePtr, inBuf + size, size % spoonge->r);
     spoonge->delayed = size % spoonge->r;
+    inBuf += (size - spoonge->delayed);
+    for (int i=0; i<spoonge->delayed; i++) statePtr[i] ^= inBuf[i];
 }
 
 void SpoongeSqueeze( KeccakSpoonge* spoonge, BYTE* outBuf, unsigned size ) {
@@ -184,11 +219,11 @@ int SHA3Init( Sha3Engine* state, unsigned digestSize) {
     return INIT_SUCCESS;
 }
 
-void SHA3Update( Sha3Engine* state, BYTE* inBuf, unsigned size ) {
+void SHA3Update( Sha3Engine* state, const BYTE* inBuf, unsigned size ) {
     SpoongeAbsorb(state, inBuf, size);
 }
 
-void SHA3Final( Sha3Engine* state, BYTE* inBuf, unsigned size ) {
+void SHA3Final( Sha3Engine* state, const BYTE* inBuf, unsigned size ) {
     SpoongeAbsorb(state, inBuf, size);
     
     BYTE* statePtr = (BYTE*)state->state;
@@ -204,7 +239,7 @@ void SHA3GetDigest( Sha3Engine* state, BYTE* digest ) {
     memcpy(digest, state->state, state->c/2);
 }
 
-int SHA3Sum( unsigned digestSize, BYTE* inBuf, unsigned size, BYTE* digest ) {
+int SHA3Sum( unsigned digestSize, const BYTE* inBuf, unsigned size, BYTE* digest ) {
     Sha3Engine sha3;
     int r = SHA3Init(&sha3, digestSize);
     SHA3Final(&sha3, inBuf, size);

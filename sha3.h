@@ -30,17 +30,17 @@ void Keccak_iota(KeccakState* state, int rnd);
 
 void Keccak_p( KeccakState* state );
 void SpoongeInit( KeccakSpoonge* spoonge, int capacity, int rate, RoundFunc* rnd);
-void SpoongeAbsorb( KeccakSpoonge* spoonge, BYTE* inBuf, unsigned size );
+void SpoongeAbsorb( KeccakSpoonge* spoonge, const BYTE* inBuf, unsigned size );
 void SpoongeSqueeze( KeccakSpoonge* spoonge, BYTE* outBuf, unsigned size );
 
 #define INVALID_HASH_LEN -1
 #define INIT_SUCCESS 0;
 
 int SHA3Init( Sha3Engine* state, unsigned digestSize);
-void SHA3Update( Sha3Engine* state, BYTE* inBuf, unsigned size );
-void SHA3Final( Sha3Engine* state, BYTE* inBuf, unsigned size );
+void SHA3Update( Sha3Engine* state, const BYTE* inBuf, unsigned size );
+void SHA3Final( Sha3Engine* state, const BYTE* inBuf, unsigned size );
 void SHA3GetDigest( Sha3Engine* state, BYTE* digest );
-int SHA3Sum( unsigned digestSize, BYTE* inBuf, unsigned size, BYTE* digest );
+int SHA3Sum( unsigned digestSize, const BYTE* inBuf, unsigned size, BYTE* digest );
 
 #ifdef __cplusplus
 }
