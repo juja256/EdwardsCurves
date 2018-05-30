@@ -135,28 +135,99 @@ void Keccak_p( KeccakState* state ) {
         D[3] = C[2] ^ ROT_L( C[4], 1 );
         D[4] = C[3] ^ ROT_L( C[0], 1 );
     
-        for (int y=0; y<5; y++) {
-            for (int x=0; x<5; x++) {
-                Lane(x, y) ^= D[x];
-            }
-        }
+        Lane(0, 0) ^= D[0];
+        Lane(1, 0) ^= D[1];
+        Lane(2, 0) ^= D[2];
+        Lane(3, 0) ^= D[3];
+        Lane(4, 0) ^= D[4];
+
+        Lane(0, 1) ^= D[0];
+        Lane(1, 1) ^= D[1];
+        Lane(2, 1) ^= D[2];
+        Lane(3, 1) ^= D[3];
+        Lane(4, 1) ^= D[4];
+
+        Lane(0, 2) ^= D[0];
+        Lane(1, 2) ^= D[1];
+        Lane(2, 2) ^= D[2];
+        Lane(3, 2) ^= D[3];
+        Lane(4, 2) ^= D[4];
+
+        Lane(0, 3) ^= D[0];
+        Lane(1, 3) ^= D[1];
+        Lane(2, 3) ^= D[2];
+        Lane(3, 3) ^= D[3];
+        Lane(4, 3) ^= D[4];
+
+        Lane(0, 4) ^= D[0];
+        Lane(1, 4) ^= D[1];
+        Lane(2, 4) ^= D[2];
+        Lane(3, 4) ^= D[3];
+        Lane(4, 4) ^= D[4];
         
         /* rho and pi */
         static KeccakState state_tmp;
-        for (int y=0; y<5; y++) {
-            for (int x=0; x<5; x++) {
-                state_tmp[x+5*y] = ROT_L( Lane( Mod( (x+3*y), 5), x ), rho_offsets[x][Mod( (x+3*y), 5)]); 
-            }
-        }
 
-        /* chi  */
-        for (int y=0; y<5; y++) {
-            Lane(0, y) = state_tmp[0 + 5*y] ^ (~state_tmp[1 + 5*y]) & state_tmp[2 + 5*y];
-            Lane(1, y) = state_tmp[1 + 5*y] ^ (~state_tmp[2 + 5*y]) & state_tmp[3 + 5*y];
-            Lane(2, y) = state_tmp[2 + 5*y] ^ (~state_tmp[3 + 5*y]) & state_tmp[4 + 5*y];
-            Lane(3, y) = state_tmp[3 + 5*y] ^ (~state_tmp[4 + 5*y]) & state_tmp[0 + 5*y];
-            Lane(4, y) = state_tmp[4 + 5*y] ^ (~state_tmp[0 + 5*y]) & state_tmp[1 + 5*y];
-        }
+        state_tmp[0+5*0] = ROT_L( Lane( Mod( (0+3*0), 5), 0 ), rho_offsets[0][Mod( (0+3*0), 5)]); 
+        state_tmp[1+5*0] = ROT_L( Lane( Mod( (1+3*0), 5), 1 ), rho_offsets[1][Mod( (1+3*0), 5)]);
+        state_tmp[2+5*0] = ROT_L( Lane( Mod( (2+3*0), 5), 2 ), rho_offsets[2][Mod( (2+3*0), 5)]);  
+        state_tmp[3+5*0] = ROT_L( Lane( Mod( (3+3*0), 5), 3 ), rho_offsets[3][Mod( (3+3*0), 5)]); 
+        state_tmp[4+5*0] = ROT_L( Lane( Mod( (4+3*0), 5), 4 ), rho_offsets[4][Mod( (4+3*0), 5)]); 
+
+        state_tmp[0+5*1] = ROT_L( Lane( Mod( (0+3*1), 5), 0 ), rho_offsets[0][Mod( (0+3*1), 5)]); 
+        state_tmp[1+5*1] = ROT_L( Lane( Mod( (1+3*1), 5), 1 ), rho_offsets[1][Mod( (1+3*1), 5)]);
+        state_tmp[2+5*1] = ROT_L( Lane( Mod( (2+3*1), 5), 2 ), rho_offsets[2][Mod( (2+3*1), 5)]);  
+        state_tmp[3+5*1] = ROT_L( Lane( Mod( (3+3*1), 5), 3 ), rho_offsets[3][Mod( (3+3*1), 5)]); 
+        state_tmp[4+5*1] = ROT_L( Lane( Mod( (4+3*1), 5), 4 ), rho_offsets[4][Mod( (4+3*1), 5)]); 
+
+        state_tmp[0+5*2] = ROT_L( Lane( Mod( (0+3*2), 5), 0 ), rho_offsets[0][Mod( (0+3*2), 5)]); 
+        state_tmp[1+5*2] = ROT_L( Lane( Mod( (1+3*2), 5), 1 ), rho_offsets[1][Mod( (1+3*2), 5)]);
+        state_tmp[2+5*2] = ROT_L( Lane( Mod( (2+3*2), 5), 2 ), rho_offsets[2][Mod( (2+3*2), 5)]);  
+        state_tmp[3+5*2] = ROT_L( Lane( Mod( (3+3*2), 5), 3 ), rho_offsets[3][Mod( (3+3*2), 5)]); 
+        state_tmp[4+5*2] = ROT_L( Lane( Mod( (4+3*2), 5), 4 ), rho_offsets[4][Mod( (4+3*2), 5)]); 
+
+        state_tmp[0+5*3] = ROT_L( Lane( Mod( (0+3*3), 5), 0 ), rho_offsets[0][Mod( (0+3*3), 5)]); 
+        state_tmp[1+5*3] = ROT_L( Lane( Mod( (1+3*3), 5), 1 ), rho_offsets[1][Mod( (1+3*3), 5)]);
+        state_tmp[2+5*3] = ROT_L( Lane( Mod( (2+3*3), 5), 2 ), rho_offsets[2][Mod( (2+3*3), 5)]);  
+        state_tmp[3+5*3] = ROT_L( Lane( Mod( (3+3*3), 5), 3 ), rho_offsets[3][Mod( (3+3*3), 5)]); 
+        state_tmp[4+5*3] = ROT_L( Lane( Mod( (4+3*3), 5), 4 ), rho_offsets[4][Mod( (4+3*3), 5)]); 
+
+        state_tmp[0+5*4] = ROT_L( Lane( Mod( (0+3*4), 5), 0 ), rho_offsets[0][Mod( (0+3*4), 5)]); 
+        state_tmp[1+5*4] = ROT_L( Lane( Mod( (1+3*4), 5), 1 ), rho_offsets[1][Mod( (1+3*4), 5)]);
+        state_tmp[2+5*4] = ROT_L( Lane( Mod( (2+3*4), 5), 2 ), rho_offsets[2][Mod( (2+3*4), 5)]);  
+        state_tmp[3+5*4] = ROT_L( Lane( Mod( (3+3*4), 5), 3 ), rho_offsets[3][Mod( (3+3*4), 5)]); 
+        state_tmp[4+5*4] = ROT_L( Lane( Mod( (4+3*4), 5), 4 ), rho_offsets[4][Mod( (4+3*4), 5)]); 
+
+        /* chi */
+        Lane(0, 0) = state_tmp[0 + 5*0] ^ (~state_tmp[1 + 5*0]) & state_tmp[2 + 5*0];
+        Lane(1, 0) = state_tmp[1 + 5*0] ^ (~state_tmp[2 + 5*0]) & state_tmp[3 + 5*0];
+        Lane(2, 0) = state_tmp[2 + 5*0] ^ (~state_tmp[3 + 5*0]) & state_tmp[4 + 5*0];
+        Lane(3, 0) = state_tmp[3 + 5*0] ^ (~state_tmp[4 + 5*0]) & state_tmp[0 + 5*0];
+        Lane(4, 0) = state_tmp[4 + 5*0] ^ (~state_tmp[0 + 5*0]) & state_tmp[1 + 5*0];
+
+        Lane(0, 1) = state_tmp[0 + 5*1] ^ (~state_tmp[1 + 5*1]) & state_tmp[2 + 5*1];
+        Lane(1, 1) = state_tmp[1 + 5*1] ^ (~state_tmp[2 + 5*1]) & state_tmp[3 + 5*1];
+        Lane(2, 1) = state_tmp[2 + 5*1] ^ (~state_tmp[3 + 5*1]) & state_tmp[4 + 5*1];
+        Lane(3, 1) = state_tmp[3 + 5*1] ^ (~state_tmp[4 + 5*1]) & state_tmp[0 + 5*1];
+        Lane(4, 1) = state_tmp[4 + 5*1] ^ (~state_tmp[0 + 5*1]) & state_tmp[1 + 5*1];
+
+        Lane(0, 2) = state_tmp[0 + 5*2] ^ (~state_tmp[1 + 5*2]) & state_tmp[2 + 5*2];
+        Lane(1, 2) = state_tmp[1 + 5*2] ^ (~state_tmp[2 + 5*2]) & state_tmp[3 + 5*2];
+        Lane(2, 2) = state_tmp[2 + 5*2] ^ (~state_tmp[3 + 5*2]) & state_tmp[4 + 5*2];
+        Lane(3, 2) = state_tmp[3 + 5*2] ^ (~state_tmp[4 + 5*2]) & state_tmp[0 + 5*2];
+        Lane(4, 2) = state_tmp[4 + 5*2] ^ (~state_tmp[0 + 5*2]) & state_tmp[1 + 5*2];
+
+        Lane(0, 3) = state_tmp[0 + 5*3] ^ (~state_tmp[1 + 5*3]) & state_tmp[2 + 5*3];
+        Lane(1, 3) = state_tmp[1 + 5*3] ^ (~state_tmp[2 + 5*3]) & state_tmp[3 + 5*3];
+        Lane(2, 3) = state_tmp[2 + 5*3] ^ (~state_tmp[3 + 5*3]) & state_tmp[4 + 5*3];
+        Lane(3, 3) = state_tmp[3 + 5*3] ^ (~state_tmp[4 + 5*3]) & state_tmp[0 + 5*3];
+        Lane(4, 3) = state_tmp[4 + 5*3] ^ (~state_tmp[0 + 5*3]) & state_tmp[1 + 5*3];
+
+        Lane(0, 4) = state_tmp[0 + 5*4] ^ (~state_tmp[1 + 5*4]) & state_tmp[2 + 5*4];
+        Lane(1, 4) = state_tmp[1 + 5*4] ^ (~state_tmp[2 + 5*4]) & state_tmp[3 + 5*4];
+        Lane(2, 4) = state_tmp[2 + 5*4] ^ (~state_tmp[3 + 5*4]) & state_tmp[4 + 5*4];
+        Lane(3, 4) = state_tmp[3 + 5*4] ^ (~state_tmp[4 + 5*4]) & state_tmp[0 + 5*4];
+        Lane(4, 4) = state_tmp[4 + 5*4] ^ (~state_tmp[0 + 5*4]) & state_tmp[1 + 5*4];
 
         /* iota */
         Lane(0,0) ^= RC[rnd];
