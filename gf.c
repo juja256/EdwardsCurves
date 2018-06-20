@@ -21,7 +21,13 @@ const u64 unity[] = { 0x1, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 const u64 zero[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  };
 
-const EcPoint uP  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0} };
+const EcPoint uPEd  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0} };
+
+const EcPoint uPW  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0} };
+
+const EcPointProj uPPEd = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0}, { 1, 0, 0, 0, 0, 0, 0, 0, 0 } };
+
+const EcPointProj uPPW = { { 1, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0}, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
 const u64 p192[]  = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
 

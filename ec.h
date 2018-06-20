@@ -39,6 +39,9 @@ typedef void TGFMulFunc(const Ec*, const GFElement, const GFElement, GFElement);
 typedef void TGFSubFunc(const Ec*, const GFElement, const GFElement, GFElement);
 typedef void TGFSqrFunc(const Ec*, const GFElement, GFElement);
 
+typedef void TEcAdd(Ec*, const EcPointProj*, const EcPointProj*, EcPointProj*);
+typedef void TEcDouble(Ec*, const EcPointProj*, EcPointProj*);
+
 #define PRNG_STATE_LEN 256 
 typedef struct {
     unsigned char state[PRNG_STATE_LEN];
@@ -84,6 +87,10 @@ typedef struct _Ec {
     
     TGFMulFunc* GFMul;
     TGFSqrFunc* GFSqr;
+
+    TEcAdd* EcAdd;
+    TEcDouble* EcDouble;
+
     PRNG prng;
 } Ec;
 
@@ -111,14 +118,14 @@ void EcCopyProj(Ec* ecc, EcPointProj* dest, const EcPointProj* src);
 void EcConvertAffineToProjective(Ec* ecc, const EcPoint* P, EcPointProj* Q);
 void EcConvertProjectiveToAffine(Ec* ecc, const EcPointProj* P, EcPoint* Q);
 
-int EcAdd(Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
-int EcDouble(Ec* ecc, const EcPoint* A, EcPoint* B);
+void EcAdd(Ec* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C);
+void EcDouble(Ec* ecc, const EcPoint* A, EcPoint* B);
 
-int EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
-int EcDoubleProj(Ec* ecc, const EcPointProj* A, EcPointProj* B);
+void EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
+void EcDoubleProj(Ec* ecc, const EcPointProj* A, EcPointProj* B);
 
-int EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
-int EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
+void EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
+void EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
 
 #ifdef __cplusplus
 }

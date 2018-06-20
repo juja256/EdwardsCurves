@@ -22,12 +22,6 @@ typedef struct {
 
 typedef KeccakSpoonge Sha3Engine;
 
-void Keccak_theta( KeccakState* state);
-void Keccak_rho(KeccakState* state);
-void Keccak_pi(KeccakState* state);
-void Keccak_chi(KeccakState* state);
-void Keccak_iota(KeccakState* state, int rnd);
-
 void Keccak_p( KeccakState* state );
 void SpoongeInit( KeccakSpoonge* spoonge, int capacity, int rate, RoundFunc* rnd);
 void SpoongeAbsorb( KeccakSpoonge* spoonge, const BYTE* inBuf, unsigned size );

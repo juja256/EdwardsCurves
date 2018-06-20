@@ -40,14 +40,6 @@ void test_ariphmetic(u64 bit_len, int isEdwards) {
     printf("Base point, in main subgroup: %d\n", isOnCurve);
 
     double s1, e1, s2, e2;
-
-    EcScalarMul(&cur, &(cur.BasePoint), cur.n, &Z);
-    s1 = GetTickCount();
-    r = EcScalarMul(&cur, &(cur.BasePoint), cur.n, &Z);
-    e1 = GetTickCount();
-    GFDump(&cur, Z.x);
-    GFDump(&cur, Z.y);
-    printf("Scalar Mul(Aff.), status: %d, time: %lf\n", r, e1-s1);
     
     EcConvertAffineToProjective(&cur, &(cur.BasePoint), &B);
     s2 = GetTickCount();
@@ -55,13 +47,13 @@ void test_ariphmetic(u64 bit_len, int isEdwards) {
         EcScalarMulProj(&cur, &B, cur.n, &A);
     e2 = GetTickCount();
 
-    r = EcScalarMulProj(&cur, &B, cur.n, &B);
+    EcScalarMulProj(&cur, &B, cur.n, &B);
     
     EcConvertProjectiveToAffine(&cur, &B, &G);
     GFDump(&cur, G.x);
     GFDump(&cur, G.y);
 
-    printf("Scalar Mul(Proj.), status: %d, time: %lf\n",r, (e2-s2)/10);
+    printf("Scalar Mul, time: %lf\n", (e2-s2)/10);
 
     EcGenerateBasePoint(&cur, &H);
     isOnCurve = EcCheckPointInMainSubGroup(&cur, &H);

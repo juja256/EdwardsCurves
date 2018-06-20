@@ -7,24 +7,17 @@
 #include <stdio.h>
 
 int EcDsaGenerateKey(Ec* ecc, BigInt key, EcPoint* Q) {
-    EcPointProj Q_p;
-
     PRNGGenerateSequence( &(ecc->prng), ecc->bitLen, (unsigned char*)key );
-
     while (GFCmp(ecc, key, ecc->n) == 1) {
         GFSub(ecc, key, ecc->n, key);
     }
-
-    EcConvertAffineToProjective(ecc, &(ecc->BasePoint), &Q_p);
-    EcScalarMulProj(ecc, &Q_p, key, &Q_p);
-    EcConvertProjectiveToAffine(ecc, &Q_p, Q);
+    EcScalarMul(ecc, &(ecc->BasePoint), key, Q);
     return 0;
 }
 
 int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signature) {
     BigInt k;
     EcPoint P;
-    EcPointProj Q_p;
     
     gen_k:
     PRNGGenerateSequence( &(ecc->prng), ecc->bitLen, (unsigned char*)k ); // generate k
@@ -33,9 +26,7 @@ int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signatu
         GFSub(ecc, k, ecc->n, k);
     }
 
-    EcConvertAffineToProjective(ecc, &(ecc->BasePoint), &Q_p);
-    EcScalarMulProj(ecc, &Q_p, k, &Q_p); // (x1, y1) = k*P
-    EcConvertProjectiveToAffine(ecc, &Q_p, &P);
+    EcScalarMul(ecc, &(ecc->BasePoint), k, &P); // (x1, y1) = k*P
 
     if (GFCmp(ecc, P.x, zero) == 0) {
         goto gen_k; 

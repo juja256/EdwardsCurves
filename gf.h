@@ -9,7 +9,10 @@ extern "C" {
 
 
 extern const u64 unity[9];
-extern const EcPoint uP;
+extern const EcPoint uPEd;
+extern const EcPoint uPW;
+extern const EcPointProj uPPEd;
+extern const EcPointProj uPPW;
 extern const u64 p192[3];
 extern const u64 p224[4];
 extern const u64 p256[4];

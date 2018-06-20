@@ -29,7 +29,7 @@ static void dump(KeccakState st) {
 #define Lane(x, y) (*state)[5*(y)+(x)]
 
 
-static BYTE rho_offsets[5][5] = 
+static const BYTE rho_offsets[5][5] = 
 { 
     {0, 1, 62, 28, 27},
     {36, 44, 6, 55, 20},
@@ -38,7 +38,7 @@ static BYTE rho_offsets[5][5] =
     {18, 2, 61, 56, 14} 
 };
 
-static WORD RC[24] = {
+static const WORD RC[24] = {
     0x0000000000000001, 0x0000000000008082,
     0x800000000000808A, 0x8000000080008000,
     0x000000000000808B, 0x0000000080000001,
@@ -121,7 +121,7 @@ void Keccak_iota(KeccakState* state, int rnd) {
 void Keccak_p( KeccakState* state ) {
     WORD C[5];
     WORD D[5];
-    for (int rnd=0; rnd<24; rnd++) {
+    for (unsigned rnd=0; rnd<24; rnd++) {
         /* theta */
         C[0] = Lane(0, 0) ^ Lane(0, 1) ^ Lane(0, 2) ^ Lane(0, 3) ^ Lane(0, 4);
         C[1] = Lane(1, 0) ^ Lane(1, 1) ^ Lane(1, 2) ^ Lane(1, 3) ^ Lane(1, 4);
@@ -166,7 +166,7 @@ void Keccak_p( KeccakState* state ) {
         Lane(4, 4) ^= D[4];
         
         /* rho and pi */
-        static KeccakState state_tmp;
+        KeccakState state_tmp;
 
         state_tmp[0+5*0] = ROT_L( Lane( Mod( (0+3*0), 5), 0 ), rho_offsets[0][Mod( (0+3*0), 5)]); 
         state_tmp[1+5*0] = ROT_L( Lane( Mod( (1+3*0), 5), 1 ), rho_offsets[1][Mod( (1+3*0), 5)]);
@@ -261,7 +261,7 @@ void SpoongeAbsorb( KeccakSpoonge* spoonge, const BYTE* inBuf, unsigned size ) {
         return;
     }
 
-    for (int i=0; i<size / spoonge->r; i++) {
+    for (unsigned i=0; i<size / spoonge->r; i++) {
         xor(statePtr, inBuf + i*spoonge->r, spoonge->r);
         spoonge->keccak_p(&spoonge->state);
     }
