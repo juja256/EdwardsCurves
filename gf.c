@@ -21,11 +21,11 @@ const u64 unity[] = { 0x1, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 const u64 zero[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  };
 
-const EcPoint uPEd  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0} };
+const EcPoint uPEd  = { { 1, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0} };
 
 const EcPoint uPW  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0} };
 
-const EcPointProj uPPEd = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0}, { 1, 0, 0, 0, 0, 0, 0, 0, 0 } };
+const EcPointProj uPPEd = { { 1, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0}, { 1, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
 const EcPointProj uPPW = { { 1, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0}, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
@@ -868,25 +868,10 @@ void GFSqr_Cmn(const Ec* ecc, const GFElement a, GFElement c) {
 }
 
 void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b) {
-    u64 carry = 0;
-    copy(b, a, ecc->wordLen);
-    b[ecc->wordLen] = 0;
-    shl(ecc->wordLen, b, b, pp);
-
-    if (ecc->bitLen % 64 == 0) {
-        carry = b[ecc->wordLen] & ((1<<pp)-1);
-        while(carry) {
-            sub(ecc->wordLen+1, b, ecc->p, b);
-            carry = b[ecc->wordLen] & ((1<<pp)-1);
-        }
-    }
-    else {
-        carry = b[ ecc->wordLen -1 ] & ((u64)(-1)<< ( ecc->bitLen % 64 ) );
-        while(carry) {
-            sub(ecc->wordLen, b, ecc->p, b);
-            carry = b[ ecc->wordLen -1 ] & ((u64)(-1)<< (ecc->bitLen % 64) );
-        }
-    }
+    VeryBigInt d;
+    memset(d, 0, ecc->wordLen*8*2);
+    shl(ecc->wordLen, a, d, pp);
+    divide(ecc->wordLen, d, ecc->p, NULL, b);
 }
 
 void GFMulByD(const EcEd* ecc, GFElement a) {    

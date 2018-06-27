@@ -196,7 +196,6 @@ void EcEdAddAf(EcEd* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
     GFMul(ecc, A->x, B->x, z1); // z1 = x1 * x2
     GFMul(ecc, A->y, B->y, z2); // z2 = y1 * y2
     GFMul(ecc, z1, z2, z3); 
-    //GFMul(ecc, z3, ecc->d, z3); 
     GFMulByD(ecc, z3); // z3 = d * x1 * x2 * y1 * y2
 
     GFNeg(ecc, z3, z4); // z4 = - z3
@@ -211,10 +210,10 @@ void EcEdAddAf(EcEd* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C) {
     GFMul(ecc, A->x, B->y, z5); // z5 = x1 * y2
     GFMul(ecc, A->y, B->x, z6); // z6 = x2 * y1
     GFAdd(ecc, z5, z6, z5);
-    GFSub(ecc, z2, z1, z2);
+    GFSub(ecc, z1, z2, z2);
 
-    GFMul(ecc, z5, z3, C->x);
-    GFMul(ecc, z2, z4, C->y);
+    GFMul(ecc, z5, z3, C->y);
+    GFMul(ecc, z2, z4, C->x);
 }
 
 int EcWAddAf(EcW* ecc, const EcPoint* A, const EcPoint* B, EcPoint* C)
@@ -258,9 +257,9 @@ void EcEdDoubleAf(EcEd* ecc, const EcPoint* A, EcPoint* B) {
     GFInv(ecc, z4, z4);
     GFAdd(ecc, z5, unity, z5);
     GFInv(ecc, z5, z5);
-    GFSub(ecc, z2, z1, z2);
-    GFMul(ecc, z4, z3, B->x);
-    GFMul(ecc, z2, z5, B->y);
+    GFSub(ecc, z1, z2, z2);
+    GFMul(ecc, z4, z3, B->y);
+    GFMul(ecc, z2, z5, B->x);
 }
 
 int EcWDoubleAf(EcW* ecc, const EcPoint* A, EcPoint* B)
@@ -357,43 +356,6 @@ void EcGenerateBasePoint(Ec* ecc, EcPoint* bp) {
     else EcWGenerateBasePoint(ecc,bp);
 }
 
-/*void EcEdScalarMul(EcEd* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
-    EcPoint P, H;
-    EcCopy(ecc, &P, &uPEd);
-    EcCopy(ecc, &H, A);
-
-    for (u32 i=0; i<ecc->bitLen; i++) {
-        if (get_bit(k, i)) {
-            EcEdAdd(ecc, &P, &H, &P);
-        }
-        EcEdDouble(ecc, &H, &H); 
-    }
-    EcCopy(ecc, B, &P);
-}
-
-int EcWScalarMul(EcW* ecc, const EcPoint* A, const BigInt k, EcPoint* B)
-{
-    int s = NORMAL_POINT;
-    
-    int hb = bigint_bit_len(ecc->wordLen, k) - 1;
-
-    EcPoint P;
-    EcCopy(ecc, &P, A);
-    for (int i = hb - 1;i >= 0;i--)
-    {
-        s &= EcWDouble(ecc, &P, &P); 
-        if (get_bit(k, i))
-            s &= EcWAdd(ecc, &P, A, &P);
-    }
-    EcCopy(ecc, B, &P);
-    return s;
-}
-
-int EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
-    if (ecc->isEdwards) { EcEdScalarMul(ecc, A, k, B); return NORMAL_POINT; }
-    else return EcWScalarMul(ecc, A, k, B);
-}*/
-
 void EcConvertAffineToProjective(Ec* ecc, const EcPoint* P, EcPointProj* Q) {
     PRNGGenerateSequence(&ecc->prng, ecc->bitLen, (u8*)(Q->Z) );
     GFMul(ecc, P->x, Q->Z, Q->X);
@@ -410,14 +372,15 @@ void EcConvertProjectiveToAffine(Ec* ecc, const EcPointProj* P, EcPoint* Q) {
     GFMul(ecc, P->Y, Z_inv, Q->y);
 }
 
-void EcEdAddProj(EcEd* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C) {
+void EcEdAddProj(EcEd* ecc, const EcPointProj* P1, const EcPointProj* P2, EcPointProj* P3) {
+    /*
     GFElement a,b,c,d,e,e1,e2,e3,f;
-    GFMul(ecc, A->Z, B->Z, a);
+    GFMul(ecc, P1->Z, P2->Z, a);
     GFSqr(ecc, a, b);
-    GFMul(ecc, A->X, B->X, c);
-    GFMul(ecc, A->Y, B->Y, d);
-    GFAdd(ecc, A->X, A->Y, e);
-    GFAdd(ecc, B->X, B->Y, e1);
+    GFMul(ecc, P1->X, P2->X, c);
+    GFMul(ecc, P1->Y, P2->Y, d);
+    GFAdd(ecc, P1->X, P1->Y, e);
+    GFAdd(ecc, P2->X, P2->Y, e1);
     GFMul(ecc, e, e1, e);
     GFSub(ecc, e, c, e);
     GFSub(ecc, e, d, e);
@@ -425,24 +388,49 @@ void EcEdAddProj(EcEd* ecc, const EcPointProj* A, const EcPointProj* B, EcPointP
 
     GFMulByD(ecc, f);
     GFSub(ecc, b, f, e2);
-    GFMul(ecc, e, a, C->X);
-    GFMul(ecc, C->X, e2, C->X);
+    GFMul(ecc, e, a, P3->X);
+    GFMul(ecc, P3->X, e2, P3->X);
 
     GFAdd(ecc, b, f, e3);
-    GFSub(ecc, d, c, C->Y);
-    GFMul(ecc, C->Y, e3, C->Y);
-    GFMul(ecc, C->Y, a, C->Y);
+    GFSub(ecc, d, c, P3->Y);
+    GFMul(ecc, P3->Y, e3, P3->Y);
+    GFMul(ecc, P3->Y, a, P3->Y);
 
-    GFMul(ecc, e2, e3, C->Z);
+    GFMul(ecc, e2, e3, P3->Z);*/
+
+    GFElement A, B, C, D, E, F, G, T;
+    GFMul(ecc, P1->Z, P2->Z, A);
+    GFSqr(ecc, A, B);
+    GFMul(ecc, P1->X, P2->X, C);
+    GFMul(ecc, P1->Y, P2->Y, D);
+    GFMul(ecc, C, D, E);
+    GFMulByD(ecc, E);
+    GFSub(ecc, B, E, F);
+    GFAdd(ecc, B, E, G);
+
+    
+    GFAdd(ecc, P1->X, P1->Y, T);
+    GFAdd(ecc, P2->X, P2->Y, P3->Y);
+    GFMul(ecc, P3->Y, T, P3->Y);
+    GFSub(ecc, P3->Y, C, P3->Y);
+    GFSub(ecc, P3->Y, D, P3->Y);
+    GFMul(ecc, P3->Y, A, P3->Y);
+    GFMul(ecc, P3->Y, F, P3->Y);
+
+    GFSub(ecc, C, D, P3->X);
+    GFMul(ecc, P3->X, A, P3->X);
+    GFMul(ecc, P3->X, G, P3->X);
+
+    GFMul(ecc, F, G, P3->Z);
 }
 
 void EcWAddProj(EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C)
 {
-    if ( GFCmp(ecc, A->Z, &zero) == 0 ) { // Handling infinities
+    if ( GFCmp(ecc, A->Z, zero) == 0 ) { // Handling infinities
         EcCopyProj(ecc, C, B);
         return;
     }
-    if ( GFCmp(ecc, B->Z, &zero) == 0 ) { // Handling infinities
+    if ( GFCmp(ecc, B->Z, zero) == 0 ) { // Handling infinities
         EcCopyProj(ecc, C, A);
         return;
     }
@@ -486,29 +474,46 @@ void EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj*
     ecc->EcAdd(ecc, A, B, C);
 }
 
-void EcEdDoubleProj(EcEd* ecc, const EcPointProj* A, EcPointProj* B) {
-    GFElement a,b,c,d,e,e1,e2,e3,f;
-    GFSqr(ecc, A->Z, a);
-    GFSqr(ecc, a, b);
-    GFSqr(ecc, A->X, c);
-    GFSqr(ecc, A->Y, d);
+void EcEdDoubleProj(EcEd* ecc, const EcPointProj* P, EcPointProj* P2) {
+    /*GFElement a,b,c,d,e,e1,e2,e3,f;
 
-    GFMul(ecc, A->X, A->Y, e);
+    GFSqr(ecc, P->Z, a);
+    GFSqr(ecc, a, b);
+    GFSqr(ecc, P->X, c);
+    GFSqr(ecc, P->Y, d);
+
+    GFMul(ecc, P->X, P->Y, e);
     GFMulBy2(ecc, e, e);
 
     GFMul(ecc, c, d, f);
-    //GFMul(ecc, f, ecc->d, f);
+
     GFMulByD(ecc, f);
     GFSub(ecc, b, f, e2);
-    GFMul(ecc, e, a, B->X);
-    GFMul(ecc, B->X, e2, B->X);
+    GFMul(ecc, e, a, P2->X);
+    GFMul(ecc, P2->X, e2, P2->X);
 
     GFAdd(ecc, b, f, e3);
-    GFSub(ecc, d, c, B->Y);
-    GFMul(ecc, B->Y, e3, B->Y);
-    GFMul(ecc, B->Y, a, B->Y);
+    GFSub(ecc, d, c, P2->Y);
+    GFMul(ecc, P2->Y, e3, P2->Y);
+    GFMul(ecc, P2->Y, a, P2->Y);
 
-    GFMul(ecc, e2, e3, B->Z);
+    GFMul(ecc, e2, e3, P2->Z);
+    */
+    GFElement A,B,C,D,E,F;
+
+    GFSqr(ecc, P->X, A); // A = X^2
+    GFSqr(ecc, P->Y, B); // B = Y^2
+    GFSqr(ecc, P->Z, C); // C = Z^2
+    GFAdd(ecc, A, B, D); // D = A+B
+    GFSub(ecc, A, B, E); // E = A-B
+    GFMulBy2(ecc, C, F); 
+    GFSub(ecc, F, D, F); // F = 2C - A - B
+    
+    GFMul(ecc, P->X, P->Y, P2->Y); 
+    GFMulBy2(ecc, P2->Y, P2->Y);
+    GFMul(ecc, P2->Y, F, P2->Y); // Y2 = 2XYF
+    GFMul(ecc, D, E, P2->X); // X2 = DE
+    GFMul(ecc, D, F, P2->Z); // Z3 = DF 
 }
 
 void EcWDoubleProj(EcW* ecc, const EcPointProj* A, EcPointProj* B)
@@ -528,9 +533,9 @@ void EcWDoubleProj(EcW* ecc, const EcPointProj* A, EcPointProj* B)
     GFMul(ecc,b,s,b);
     //h = w^2-8b
     GFSqr(ecc,w,h);
-    GFMulBy2(ecc,b,tmp);
-    GFMulBy2(ecc,tmp,tmp);
-    GFMulBy2(ecc,tmp,tmp);//now tmp = 8b
+
+    GFMulBy2Power(ecc,b,3,tmp);
+
     GFSub(ecc,h,tmp,h);
     //x2 = 2hs
     GFMul(ecc,h,s,B->X);
@@ -540,8 +545,8 @@ void EcWDoubleProj(EcW* ecc, const EcPointProj* A, EcPointProj* B)
     GFMulBy2(ecc,tmp,tmp);
     GFSqr(ecc,tmp,tmp);
     GFMulBy2(ecc,tmp,tmp); // now tmp = 8*(y1*s)^2
-    GFMulBy2(ecc,b,B->Y);
-    GFMulBy2(ecc,B->Y,B->Y);
+    GFMulBy2Power(ecc,b,2,B->Y);
+
     GFSub(ecc,B->Y,h,B->Y);
     GFMul(ecc,w,B->Y,B->Y);
     GFSub(ecc,B->Y,tmp,B->Y);
@@ -569,6 +574,7 @@ static inline void EcScalarMulNaive(Ec* ecc, const EcPointProj* A, const BigInt 
     }
 }
 
+/* Not fast, but secure for timing attacks */
 static inline void EcScalarMulMontgomery(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     EcPointProj H;
     
@@ -691,36 +697,36 @@ int EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards) {
             GFInitFromString(p,  "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF");
             GFInitFromString(n,  "3FFFFFFFFFFFFFFFFFFFFFFFEA75D4027230DD4DFFDB0455");
             GFInitFromString(d,  "6DBA6A");
-            GFInitFromString(G.x,"44F083BB00E51AD91A2743284D31F57EE5C84826FCC91F4B");
-            GFInitFromString(G.y,"15FC16E5870524E0DBBE9EC8BB9F066C02A02B1978D4E029");
+            GFInitFromString(G.y,"44F083BB00E51AD91A2743284D31F57EE5C84826FCC91F4B");
+            GFInitFromString(G.x,"15FC16E5870524E0DBBE9EC8BB9F066C02A02B1978D4E029");
             break;
             case 224:
             GFInitFromString(p,  "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001");
             GFInitFromString(n,  "400000000000000000000000000020BBEC47CEDB34DD05BCB6B7E619");
             GFInitFromString(d,  "3608425");
-            GFInitFromString(G.x,"C448CA02660F57204FF1BDE2B5CC3E25606A7460399FEA3DA9A06383");
-            GFInitFromString(G.y,"319117770D6FC7FE35F6A02905FE1F363156BD2E5B75BB89A64CAFAB");
+            GFInitFromString(G.y,"C448CA02660F57204FF1BDE2B5CC3E25606A7460399FEA3DA9A06383");
+            GFInitFromString(G.x,"319117770D6FC7FE35F6A02905FE1F363156BD2E5B75BB89A64CAFAB");
             break;
             case 256:
             GFInitFromString(p,  "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF");
             GFInitFromString(n,  "3FFFFFFFC00000003FFFFFFFFFFFFFFFBA76FA29C30CC3AA4954B53EDBE54D75");
             GFInitFromString(d,  "72A38");
-            GFInitFromString(G.x,"894F8283626AEE6848515DDDC3B8DBB3D5302DEE0EE75080D6753E4D39BA5AB2");
-            GFInitFromString(G.y,"EA612346223F6480CBBAFA39DB95D54D21469DD3074A957EFDA4FD79FEB630B5");
+            GFInitFromString(G.y,"894F8283626AEE6848515DDDC3B8DBB3D5302DEE0EE75080D6753E4D39BA5AB2");
+            GFInitFromString(G.x,"EA612346223F6480CBBAFA39DB95D54D21469DD3074A957EFDA4FD79FEB630B5");
             break;
             case 384:
             GFInitFromString(p,  "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF");
             GFInitFromString(n,  "4000000000000000000000000000000000000000000000005063576B5A9A0C3A23E9510EA680650B4884E63A2968DD71");
             GFInitFromString(d,  "12593A");
-            GFInitFromString(G.x,"1FC0E8E61F599813E376D11F7510D77F177C2F1CDE19FD14D63A2EC5EAD4D0DED1BD06676CCF365243BF3C0675A31B62");
-            GFInitFromString(G.y,"F52B4FA352B257D7A102FA45C56A50CCBDB3DEC053D5610EDBD0188C11F321F28A43E2FC50395E4A8BD0029AE71D51AA");
+            GFInitFromString(G.y,"1FC0E8E61F599813E376D11F7510D77F177C2F1CDE19FD14D63A2EC5EAD4D0DED1BD06676CCF365243BF3C0675A31B62");
+            GFInitFromString(G.x,"F52B4FA352B257D7A102FA45C56A50CCBDB3DEC053D5610EDBD0188C11F321F28A43E2FC50395E4A8BD0029AE71D51AA");
             break;
             case 521:
             GFInitFromString(p,  "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
             GFInitFromString(n,  "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF46087BC4A294FCC80B3F45D8CEBFB21479BA651BA07DE913AD1D8392DE3FF8AF");
             GFInitFromString(d,  "16A");
-            GFInitFromString(G.x,"1C4A8AA03837A73FC86D95F308BD9B738E2BFAB5B8ECCEB0EF90F02B5E90D1DF28D470C4F531212CD0E68F4E925E5ED82A74AB63335A9DB3E31650C6767EBA00681");
-            GFInitFromString(G.y,"11365BAC31463E811ECB7FEF04F65DE5B8B15ADAFD72CC74EC804B9408EB31F0E44CE67EA36144A06B07D105B862E2493B556740F343DB87866E15C7BE9F3813666");
+            GFInitFromString(G.y,"1C4A8AA03837A73FC86D95F308BD9B738E2BFAB5B8ECCEB0EF90F02B5E90D1DF28D470C4F531212CD0E68F4E925E5ED82A74AB63335A9DB3E31650C6767EBA00681");
+            GFInitFromString(G.x,"11365BAC31463E811ECB7FEF04F65DE5B8B15ADAFD72CC74EC804B9408EB31F0E44CE67EA36144A06B07D105B862E2493B556740F343DB87866E15C7BE9F3813666");
             break;
             default:
             return -1;
