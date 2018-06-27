@@ -41,17 +41,15 @@ void test_ariphmetic(u64 bit_len, int isEdwards) {
 
     double s1, e1, s2, e2;
     
-    EcConvertAffineToProjective(&cur, &(cur.BasePoint), &B);
+    EcScalarMul(&cur, &(cur.BasePoint), cur.n, &H);
+
     s2 = GetTickCount();
     for (int i=0;i<10;i++)
-        EcScalarMulProj(&cur, &B, cur.n, &A);
+        EcScalarMul(&cur, &(cur.BasePoint), cur.n, &H);
     e2 = GetTickCount();
-
-    EcScalarMulProj(&cur, &B, cur.n, &B);
     
-    EcConvertProjectiveToAffine(&cur, &B, &G);
-    GFDump(&cur, G.x);
-    GFDump(&cur, G.y);
+    GFDump(&cur, H.x);
+    GFDump(&cur, H.y);
 
     printf("Scalar Mul, time: %lf\n", (e2-s2)/10);
 

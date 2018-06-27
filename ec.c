@@ -162,7 +162,6 @@ int EcEdCheckPointOnCurve(EcEd* ecc, const EcPoint* P) {
     GFSqr(ecc, P->y, y);
     GFAdd(ecc, x, y, z);
     GFMul(ecc, x, y, x);
-    //GFMul(ecc, x, ecc->d, x);
     GFMulByD(ecc, x);
     GFAdd(ecc, x, unity, x);
     return !GFCmp(ecc, x, z); //1 - ok
@@ -250,7 +249,6 @@ void EcEdDoubleAf(EcEd* ecc, const EcPoint* A, EcPoint* B) {
     GFMul(ecc, A->x, A->y, z3);
     GFMulBy2(ecc, z3, z3);
     GFMul(ecc, z1, z2, z4);
-    //GFMul(ecc, z4, ecc->d, z4);
     GFMulByD(ecc, z4);
     GFNeg(ecc, z4, z5);
     GFAdd(ecc, z4, unity, z4);
@@ -310,7 +308,6 @@ void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp) {
         GFSqr(ecc, bp->x, t1);
         GFNeg(ecc, t1, t2);
         GFAdd(ecc, t2, unity, t2);
-        //GFMul(ecc, t1, ecc->d, t1);
         GFMulByD(ecc, t1);
         GFNeg(ecc, t1, t1);
         GFAdd(ecc, t1, unity, t1);
@@ -372,41 +369,17 @@ void EcConvertProjectiveToAffine(Ec* ecc, const EcPointProj* P, EcPoint* Q) {
     GFMul(ecc, P->Y, Z_inv, Q->y);
 }
 
+/* According to http://elibrary.kubg.edu.ua/21879/1/A_Bessalov_Polytechnika_2017_FIT.pdf */
 void EcEdAddProj(EcEd* ecc, const EcPointProj* P1, const EcPointProj* P2, EcPointProj* P3) {
-    /*
-    GFElement a,b,c,d,e,e1,e2,e3,f;
-    GFMul(ecc, P1->Z, P2->Z, a);
-    GFSqr(ecc, a, b);
-    GFMul(ecc, P1->X, P2->X, c);
-    GFMul(ecc, P1->Y, P2->Y, d);
-    GFAdd(ecc, P1->X, P1->Y, e);
-    GFAdd(ecc, P2->X, P2->Y, e1);
-    GFMul(ecc, e, e1, e);
-    GFSub(ecc, e, c, e);
-    GFSub(ecc, e, d, e);
-    GFMul(ecc, c, d, f);
-
-    GFMulByD(ecc, f);
-    GFSub(ecc, b, f, e2);
-    GFMul(ecc, e, a, P3->X);
-    GFMul(ecc, P3->X, e2, P3->X);
-
-    GFAdd(ecc, b, f, e3);
-    GFSub(ecc, d, c, P3->Y);
-    GFMul(ecc, P3->Y, e3, P3->Y);
-    GFMul(ecc, P3->Y, a, P3->Y);
-
-    GFMul(ecc, e2, e3, P3->Z);*/
-
     GFElement A, B, C, D, E, F, G, T;
-    GFMul(ecc, P1->Z, P2->Z, A);
-    GFSqr(ecc, A, B);
-    GFMul(ecc, P1->X, P2->X, C);
-    GFMul(ecc, P1->Y, P2->Y, D);
-    GFMul(ecc, C, D, E);
-    GFMulByD(ecc, E);
-    GFSub(ecc, B, E, F);
-    GFAdd(ecc, B, E, G);
+    GFMul(ecc, P1->Z, P2->Z, A); // A = Z1Z2
+    GFSqr(ecc, A, B); // B = A^2
+    GFMul(ecc, P1->X, P2->X, C); // C = X1X2
+    GFMul(ecc, P1->Y, P2->Y, D); // D = Y1Y2
+    GFMul(ecc, C, D, E); 
+    GFMulByD(ecc, E); // E = dCD
+    GFSub(ecc, B, E, F); // F = B-E
+    GFAdd(ecc, B, E, G); // G = B+E
 
     
     GFAdd(ecc, P1->X, P1->Y, T);
@@ -415,13 +388,13 @@ void EcEdAddProj(EcEd* ecc, const EcPointProj* P1, const EcPointProj* P2, EcPoin
     GFSub(ecc, P3->Y, C, P3->Y);
     GFSub(ecc, P3->Y, D, P3->Y);
     GFMul(ecc, P3->Y, A, P3->Y);
-    GFMul(ecc, P3->Y, F, P3->Y);
+    GFMul(ecc, P3->Y, F, P3->Y); // Y3 = AF((X1+Y1)(X2+Y2)-C-D)
 
     GFSub(ecc, C, D, P3->X);
     GFMul(ecc, P3->X, A, P3->X);
-    GFMul(ecc, P3->X, G, P3->X);
+    GFMul(ecc, P3->X, G, P3->X); // X3 = AG(C-D) 
 
-    GFMul(ecc, F, G, P3->Z);
+    GFMul(ecc, F, G, P3->Z); // Z3 = FG
 }
 
 void EcWAddProj(EcW* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C)
@@ -475,30 +448,6 @@ void EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj*
 }
 
 void EcEdDoubleProj(EcEd* ecc, const EcPointProj* P, EcPointProj* P2) {
-    /*GFElement a,b,c,d,e,e1,e2,e3,f;
-
-    GFSqr(ecc, P->Z, a);
-    GFSqr(ecc, a, b);
-    GFSqr(ecc, P->X, c);
-    GFSqr(ecc, P->Y, d);
-
-    GFMul(ecc, P->X, P->Y, e);
-    GFMulBy2(ecc, e, e);
-
-    GFMul(ecc, c, d, f);
-
-    GFMulByD(ecc, f);
-    GFSub(ecc, b, f, e2);
-    GFMul(ecc, e, a, P2->X);
-    GFMul(ecc, P2->X, e2, P2->X);
-
-    GFAdd(ecc, b, f, e3);
-    GFSub(ecc, d, c, P2->Y);
-    GFMul(ecc, P2->Y, e3, P2->Y);
-    GFMul(ecc, P2->Y, a, P2->Y);
-
-    GFMul(ecc, e2, e3, P2->Z);
-    */
     GFElement A,B,C,D,E,F;
 
     GFSqr(ecc, P->X, A); // A = X^2
