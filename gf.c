@@ -115,6 +115,39 @@ inline void mul(u64 n, const u64* a, const u64* b, u64* c) {
     }
 }
 
+/*
+    (a[0] + B a[1] + B^2 a[2] + ... + B^{n-1} a[n-1])^2 = a[0]^2 + B^2 a[1]^2 + ... + B^{2(n-1)} a[n-1]^2 + 2 \Sum{i,j} a[i]a[j] B^{i+j}
+    (FF FF)^2 = FE 01 00 00 + 01 FC 02 00 + FE 01 = FF FE 00 01
+*/
+inline void sqr(u64 n, const u64* a, u64* res) {
+    u64 c, c2;
+    memset(res, 0, 2*8*n);
+    u64 mult [2] = {0, 0};
+    u64 carry[2] = {0, 0}; 
+    for (int i=0; i<n; i++) {
+        _mul_raw(a[i], a[i], &c, &carry[0]);
+        carry[0] += _add_raw(res[2*i], c, &res[2*i]);
+        carry[1] = 0;
+        /* carry[0] - actual 64 bit carry after squaring, carry[1] - still 0 */
+        for (int j=i+1; j<n; j++) {
+            _mul_raw(a[i], a[j], &mult[0], &mult[1]);
+
+            c2 = _add_raw(mult[0], mult[0], &mult[0]); 
+            c = _add_raw(mult[1], mult[1], &mult[1]); 
+
+            mult[1] |= c2; /* mult = 2*a[i]*a[j] */
+            mult[1] += _add_raw(mult[0], carry[0], &mult[0]);
+            c += _add_raw(mult[1], carry[1], &mult[1]); /* mult = mult + carry */
+
+            mult[1] += _add_raw(mult[0], res[i+j], &res[i+j]); /* res[i+j] += mult[0] */
+
+            carry[0] = mult[1];
+            carry[1] = c;
+        }
+        res[i+n+carry[1]] += _add_raw(res[i+n], carry[0], &res[i+n]) + carry[1]; /* some sort of hack, due to carry[1] might be only 0 or 1 */
+    }
+}
+
 inline int word_bit_len(u64 n) {
     int c = 64;
     while (c) {
@@ -510,7 +543,9 @@ void GFMul_FIPS192(const Ec* ecc, const GFElement a, const GFElement b, GFElemen
 }
 
 void GFSqr_FIPS192(const Ec* ecc, const GFElement a, GFElement b) {
-    GFMul_FIPS192(ecc, a, a, b);
+    VeryBigInt c;
+    sqr(ecc->wordLen, a, c);
+    GFReduct_FIPS192(ecc, c, b);
 }
 
 /* FIPS-224 Fp: p = 2^224 - 2^96 + 1 */
@@ -581,7 +616,9 @@ void GFMul_FIPS224(const Ec* ecc, const GFElement a, const GFElement b, GFElemen
 }
 
 void GFSqr_FIPS224(const Ec* ecc, const GFElement a, GFElement b) {
-    GFMul_FIPS224(ecc, a, a, b);
+    VeryBigInt c;
+    sqr(ecc->wordLen, a, c);
+    GFReduct_FIPS224(ecc, c, b);
 }
 
 /*p = 2^256 – 2^224 + 2^192 + 2^96 – 1*/
@@ -683,7 +720,9 @@ void GFMul_FIPS256(const Ec* ecc,const GFElement a,const GFElement b, GFElement 
 }
 
 void GFSqr_FIPS256(const Ec* ecc,const GFElement a,  GFElement  b) {
-    GFMul_FIPS256(ecc, a, a, b);
+    VeryBigInt c;
+    sqr(ecc->wordLen, a, c);
+    GFReduct_FIPS256(ecc, c, b);
 }
 
 /* FIPS-384 Fp: p = 2^384 - 2^128 - 2^96 +  2^32 - 1 */
@@ -831,7 +870,9 @@ void GFMul_FIPS384(const Ec* ecc, const GFElement a, const GFElement b, GFElemen
 }
 
 void GFSqr_FIPS384(const Ec* ecc, const GFElement a, GFElement b) {
-    GFMul_FIPS384(ecc, a, a, b);
+    VeryBigInt c;
+    sqr(ecc->wordLen, a, c);
+    GFReduct_FIPS384(ecc, c, b);
 }
 
 /* FIPS-521 Fp: p = 2^521 - 1 */
@@ -855,8 +896,10 @@ void GFMul_FIPS521(const Ec* ecc, const GFElement a, const GFElement b, GFElemen
     GFReduct_FIPS521(ecc, c, res);
 }
 
-void GFSqr_FIPS521(const Ec* ecc, const GFElement a, GFElement c) {
-    GFMul_FIPS521(ecc, a, a, c);
+void GFSqr_FIPS521(const Ec* ecc, const GFElement a, GFElement b) {
+    VeryBigInt c;
+    sqr(ecc->wordLen, a, c);
+    GFReduct_FIPS521(ecc, c, b);
 }
 
 void GFMul_Cmn(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
