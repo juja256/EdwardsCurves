@@ -456,7 +456,7 @@ void GFNeg(const Ec* ecc, const GFElement a, GFElement c) {
 }
 
 void GFAdd(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
-    u64 carry = 0;
+    u64 carry;
     switch (ecc->bitLen) {
         case 192:
         case 256:
@@ -470,35 +470,42 @@ void GFAdd(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
             }
             break;
         }
-        case 224: {
+        case 224:
+        case 521: {
             add(ecc->wordLen, a, b, c);
-            carry = (c[ecc->wordLen - 1] & ((u64)1 << 32));
-            if (carry) {
-                sub(ecc->wordLen, c, ecc->p, c);
-            }
+
             if(GFCmp(ecc,c,ecc->p)!=-1) {
                 sub(ecc->wordLen, c, ecc->p, c);
             }
-            break;
-        }
-        case 521: {
-            add(ecc->wordLen, a, b, c);
-            carry = (c[ecc->wordLen - 1] & ((u64)1 << 9));
-            /*if (carry) {
-                sub(ecc->wordLen, c, ecc->p, c);
-            }*/
-            if(GFCmp(ecc, c, ecc->p) != -1)
-                sub(ecc->wordLen, c, ecc->p, c);
             break;
         }
     }
 }
 
 void GFSub(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
-    GFElement tmp;
-    copy(tmp, a, ecc->wordLen);                           
-    sub(ecc->wordLen, ecc->p, (u64*)b, (u64*)c);
-    GFAdd(ecc, tmp, c, c);
+    u64 borrow;
+    switch (ecc->bitLen) {
+        case 192:
+        case 256:
+        case 384: {
+            borrow = sub(ecc->wordLen, a, b, c);
+            if (borrow) {
+                add(ecc->wordLen, c, ecc->p, c);
+            }
+           
+            break;
+        }
+        case 224:
+        case 521: {
+            sub(ecc->wordLen, a, b, c);
+
+            borrow = c[ecc->wordLen - 1] & ((u64)1 << (ecc->bitLen % 64) );
+            if (borrow) {
+                add(ecc->wordLen, c, ecc->p, c);
+            }
+            break;
+        }
+    }
 }
 
 /* FIPS-192 Fp: p = 2^192 - 2^64 - 1*/
