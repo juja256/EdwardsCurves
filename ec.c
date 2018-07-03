@@ -65,6 +65,11 @@ void EcIdentityPointProj(Ec* ecc, EcPointProj* P) {
     }
 }
 
+void EcDestroy(Ec* ecc) {
+    if (ecc->T != NULL)
+        free(ecc->T);
+}
+
 void BaseEcInit(Ec* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n)
 {
     srand(time(NULL));
@@ -121,7 +126,6 @@ void BaseEcInit(Ec* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const Bi
         copy(ecc->BasePoint.x, bp->x, ecc->wordLen);
         copy(ecc->BasePoint.y, bp->y, ecc->wordLen);
     }
-
 }
 
 int EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement d) {
@@ -131,6 +135,7 @@ int EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const Big
     ecc->EcDouble = EcEdDoubleProj;
 
     copy(ecc->d, d, ecc->wordLen);
+    EcScalarMulWindowedPrecomputation(ecc, &(ecc->BasePoint), &(ecc->T), 4);
     return 0;
 }
 
@@ -143,7 +148,7 @@ int EcWInit(EcW* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigIn
 
     copy(ecc->a, a, ecc->wordLen);
     copy(ecc->b, b, ecc->wordLen);
-    
+    EcScalarMulWindowedPrecomputation(ecc, &(ecc->BasePoint), &(ecc->T), 4);
     return 0;
 }
 
@@ -509,7 +514,8 @@ void EcDoubleProj(Ec* ecc, const EcPointProj* A, EcPointProj* B) {
     ecc->EcDouble(ecc, A, B);
 }
 
-static inline void EcScalarMulNaive(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
+/* Easiest AddAndDouble ScalarMul */
+void EcScalarMulNaive(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     EcPointProj H;
     
     EcCopyProj(ecc, &H, A); // H := A
@@ -523,8 +529,8 @@ static inline void EcScalarMulNaive(Ec* ecc, const EcPointProj* A, const BigInt 
     }
 }
 
-/* Not fast, but secure for timing attacks */
-static inline void EcScalarMulMontgomery(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
+/* Constant-time AlwaysAddAndDouble Montgomery ScalarMul */
+void EcScalarMulMontgomery(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     EcPointProj H;
     
     EcCopyProj(ecc, &H, A); // H := A, H = P1
@@ -542,6 +548,37 @@ static inline void EcScalarMulMontgomery(Ec* ecc, const EcPointProj* A, const Bi
     }
 }
 
+
+/* Fixed-window mostly constant-time ScalarMul */
+void EcScalarMulWindowedPrecomputation(Ec* ecc, const EcPoint* A, EcPointProj** T, int windowSize) {
+    *T = (EcPointProj*)malloc(sizeof(EcPointProj) * (1<<windowSize) );
+    BigInt k;
+    EcPointProj bpp;
+    EcConvertAffineToProjective(ecc, A, &bpp);
+    copy(k, zero, ecc->wordLen);
+    for (int i=0; i<(1<<windowSize); i++) {
+        EcScalarMulNaive(ecc, &bpp, k, &((*T)[i]));
+        k[0]++;
+    }
+}
+
+void EcScalarMulWindowed(Ec* ecc, const EcPointProj* T, int windowSize, const BigInt k, EcPointProj* B) {
+    int m = (ecc->bitLen % windowSize == 0) ? (ecc->bitLen / windowSize) : (ecc->bitLen / windowSize) + 1;
+    EcIdentityPointProj(ecc, B);
+
+    for (int i=m-1; i>=0; i--) {
+        for (int j=0;j<windowSize;j++){
+            ecc->EcDouble(ecc, B, B);
+        }
+        int n = (k[ (i*windowSize) / 64 ] & ( (u64)( (1<<windowSize) - 1) << ((i*windowSize) % 64) )) >> ((i*windowSize) % 64);
+        ecc->EcAdd(ecc, B, &(T[n]), B);
+    }
+}
+
+/*static inline void EcScalarMulNAF(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
+
+}*/
+
 void EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     EcScalarMulMontgomery(ecc, A, k, B);
 }
@@ -549,7 +586,7 @@ void EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj*
 void EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     EcPointProj A_p, B_p;
     EcConvertAffineToProjective(ecc, A, &A_p);
-    EcScalarMulMontgomery(ecc, &A_p, k, &B_p);
+    EcScalarMulWindowed(ecc, ecc->T, 4, k, &B_p);
     EcConvertProjectiveToAffine(ecc, &B_p, B);
 }
 

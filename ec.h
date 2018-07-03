@@ -92,6 +92,8 @@ typedef struct _Ec {
     TEcDouble* EcDouble;
 
     PRNG prng;
+
+    EcPointProj* T; // for precomputations
 } Ec;
 
 typedef Ec EcEd;
@@ -110,6 +112,8 @@ int  EcCheckPointOnCurve(Ec* ecc, const EcPoint* P);
 
 void EcDump(Ec* ecc, char* buf);
 
+void EcDestroy(Ec* ecc);
+
 /* Arithmetic on Elliptic Curves */
 int  EcPointCmp(Ec* ecc, const EcPoint* A, const EcPoint* B);
 void EcCopy(Ec* ecc, EcPoint* dest, const EcPoint* src);
@@ -123,6 +127,11 @@ void EcDouble(Ec* ecc, const EcPoint* A, EcPoint* B);
 
 void EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
 void EcDoubleProj(Ec* ecc, const EcPointProj* A, EcPointProj* B);
+
+void EcScalarMulWindowedPrecomputation(Ec* ecc, const EcPoint* A, EcPointProj** T, int windowSize);
+void EcScalarMulWindowed(Ec* ecc, const EcPointProj* T, int windowSize, const BigInt k, EcPointProj* B);
+void EcScalarMulNaive(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
+void EcScalarMulMontgomery(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
 
 void EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
 void EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);

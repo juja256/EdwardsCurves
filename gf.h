@@ -35,7 +35,7 @@ u64 _add_raw(u64 a, u64 b, u64* c);
 void mul_by_word(u64 n, const u64* a, u64 d, u64* c);
 void mul(u64 n, const u64* a, const u64* b, u64* c);
 void imul(u64 n, const u64* a, const u64* b, u64* c);
-
+void sqr(u64 n, const u64* a, u64* res);
 int word_bit_len(u64 w);
 int bigint_bit_len(u64 n, const u64* a);
 

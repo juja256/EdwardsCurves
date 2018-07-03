@@ -48,7 +48,7 @@ int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signatu
 }
 
 int EcDsaVerify(Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature* signature) {
-    if ( !EcCheckPointInMainSubGroup(ecc, Q) ) return VER_BROKEN_KEY;
+    //if ( !EcCheckPointInMainSubGroup(ecc, Q) ) return VER_BROKEN_KEY;
     if ( ( GFCmp(ecc, signature->r, unity) != 1 ) || ( GFCmp(ecc, signature->r, ecc->n) != -1 ) 
         || ( GFCmp(ecc, signature->s, unity) != 1 ) || ( GFCmp(ecc, signature->s, ecc->n) != -1 ) ) return VER_BROKEN_SIGNATURE;
 
@@ -61,8 +61,8 @@ int EcDsaVerify(Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature*
     EcPoint P;
     EcConvertAffineToProjective(ecc, &(ecc->BasePoint), &P_p);
     EcConvertAffineToProjective(ecc, Q, &Q_p);
-    EcScalarMulProj(ecc, &Q_p, u2, &Q_p);
-    EcScalarMulProj(ecc, &P_p, u1, &P_p);
+    EcScalarMulNaive(ecc, &Q_p, u2, &Q_p);
+    EcScalarMulNaive(ecc, &P_p, u1, &P_p);
     EcAddProj(ecc, &P_p, &Q_p, &P_p); // P = u1*G + u2*Q
     EcConvertProjectiveToAffine(ecc, &P_p, &P);
 
