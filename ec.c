@@ -376,6 +376,7 @@ void EcConvertProjectiveToAffine(Ec* ecc, const EcPointProj* P, EcPoint* Q) {
 
 /* According to http://elibrary.kubg.edu.ua/21879/1/A_Bessalov_Polytechnika_2017_FIT.pdf */
 void EcEdAddProj(EcEd* ecc, const EcPointProj* P1, const EcPointProj* P2, EcPointProj* P3) {
+    /* 10M + 1S */
     GFElement A, B, C, D, E, F, G, T;
     GFMul(ecc, P1->Z, P2->Z, A); // A = Z1Z2
     GFSqr(ecc, A, B); // B = A^2
@@ -452,8 +453,10 @@ void EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj*
     ecc->EcAdd(ecc, A, B, C);
 }
 
+
 void EcEdDoubleProj(EcEd* ecc, const EcPointProj* P, EcPointProj* P2) {
-    GFElement A,B,C,D,E,F;
+    /* 3M + 4S */
+    GFElement A,B,C,D,E,F,G;
 
     GFSqr(ecc, P->X, A); // A = X^2
     GFSqr(ecc, P->Y, B); // B = Y^2
@@ -462,10 +465,11 @@ void EcEdDoubleProj(EcEd* ecc, const EcPointProj* P, EcPointProj* P2) {
     GFSub(ecc, A, B, E); // E = A-B
     GFMulBy2(ecc, C, F); 
     GFSub(ecc, F, D, F); // F = 2C - A - B
+    GFAdd(ecc, P->X, P->Y, G);
+    GFSqr(ecc, G, G);
+    GFSub(ecc, G, D, G);
     
-    GFMul(ecc, P->X, P->Y, P2->Y); 
-    GFMulBy2(ecc, P2->Y, P2->Y);
-    GFMul(ecc, P2->Y, F, P2->Y); // Y2 = 2XYF
+    GFMul(ecc, F, G, P2->Y); // Y2 = FG 
     GFMul(ecc, D, E, P2->X); // X2 = DE
     GFMul(ecc, D, F, P2->Z); // Z3 = DF 
 }
@@ -575,9 +579,36 @@ void EcScalarMulWindowed(Ec* ecc, const EcPointProj* T, int windowSize, const Bi
     }
 }
 
-/*static inline void EcScalarMulNAF(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
+typedef signed char BigIntNAF[sizeof(BigInt) * 8 + 1];
 
-}*/
+static inline char mods(BigInt d, int w) {
+    if ( d[0] & (1<<w-1) ) return (char)(d[0] & ((1<<w)-1)) - (char)(1 << w);
+    else return (char)(d[0] & ((1<<w)-1));
+}
+
+/* via Reitwiesner Algorithm */
+static inline void ConvertBigIntTowNAF(Ec* ecc, const BigInt k, int w, BigIntNAF naf) {
+    int i = 0;
+    BigInt d;
+    copy(ecc->wordLen, d, k);
+    memset(naf, 0, sizeof(BigIntNAF));
+    while (GFCmp(ecc, &d, &zero) != 0) {
+        if ( (d[0] & 1) == 1) {
+            naf[i] = mods(d, w);
+
+        }
+        div2(ecc->wordLen, d);
+        i++;
+    }
+}
+
+void EcScalarMulwNAFPrecomputation(Ec* ecc, const EcPoint* A, EcPointProj** T, int windowSize) {
+
+}
+
+void EcScalarMulwNAF(Ec* ecc, const EcPointProj* T, int windowSize, const BigInt k, EcPointProj* B) {
+
+}
 
 void EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
     EcScalarMulMontgomery(ecc, A, k, B);

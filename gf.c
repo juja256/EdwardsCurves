@@ -61,6 +61,20 @@ inline u64 add(u64 n, const u64* a, const u64* b, u64* c) {
     return carry;
 }
 
+inline u64 add_word(u64 n, const u64* a, const u64 b, u64* c) {
+    u64 msb_a, msb_b, carry = b, i = 0;
+    
+    while( (carry != 0) && (i < n) ) {
+        msb_a = a[i] & MSB_M;
+        msb_b = carry & MSB_M;
+        c[i] = a[i] + carry;
+        carry = ( (msb_a && msb_b) || ((msb_a ^ msb_b) && !(MSB_M & c[i])) );
+        i++;
+    }
+    
+    return carry;
+}
+
 inline u64 sub(u64 n, const u64* a, const u64* b, u64* c) {
     u64 borrow = 0;
     for (int i=0; i<n; i++) {
@@ -68,6 +82,18 @@ inline u64 sub(u64 n, const u64* a, const u64* b, u64* c) {
         u64 t_b = b[i];
         c[i] = t_a - t_b - borrow;
         borrow = ( (~t_a) & (c[i] | t_b) | (c[i] & t_b) ) >> (63);
+    }
+    return borrow;
+}
+
+inline u64 sub_word(u64 n, const u64* a, const u64 b, u64* c) {
+    u64 borrow = b, i = 0;
+    while( (borrow != 0) && (i < n) ) {
+        u64 t_a = a[i];
+        u64 t_b = borrow;
+        c[i] = t_a - borrow;
+        borrow = ( (~t_a) & (c[i] | t_b) | (c[i] & t_b) ) >> (63);
+        i++;
     }
     return borrow;
 }
@@ -93,7 +119,7 @@ inline u64 _add_raw(u64 a, u64 b, u64* c) {
     __int128 r = (__int128)a + (__int128)b;
     *c = (u64)r;
     return r >> 64;
-#endif 
+#endif
 }
 
 inline void mul_by_word(u64 n, const u64* a, u64 d, u64* c) {
