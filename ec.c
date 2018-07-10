@@ -590,12 +590,17 @@ static inline char mods(BigInt d, int w) {
 static inline void ConvertBigIntTowNAF(Ec* ecc, const BigInt k, int w, BigIntNAF naf) {
     int i = 0;
     BigInt d;
-    copy(ecc->wordLen, d, k);
+    copy(d, k, ecc->wordLen);
     memset(naf, 0, sizeof(BigIntNAF));
-    while (GFCmp(ecc, &d, &zero) != 0) {
+    while (GFCmp(ecc, d, zero) != 0) {
         if ( (d[0] & 1) == 1) {
             naf[i] = mods(d, w);
-
+            if (naf[i] >= 0) {
+                sub_word(ecc->wordLen, d, naf[i], d);
+            }
+            else {
+                add_word(ecc->wordLen, d, -naf[i], d);
+            }
         }
         div2(ecc->wordLen, d);
         i++;
@@ -603,11 +608,30 @@ static inline void ConvertBigIntTowNAF(Ec* ecc, const BigInt k, int w, BigIntNAF
 }
 
 void EcScalarMulwNAFPrecomputation(Ec* ecc, const EcPoint* A, EcPointProj** T, int windowSize) {
-
+    *T = (EcPointProj*)malloc(sizeof(EcPointProj) * (1<<windowSize)/2 );
+    BigInt k;
+    EcPointProj bpp;
+    EcConvertAffineToProjective(ecc, A, &bpp);
+    copy(k, unity, ecc->wordLen);
+    for (int i=0; i<(1<<windowSize)/2; i+=2) {
+        EcScalarMulNaive(ecc, &bpp, k, &((*T)[i]));
+        EcCopyProj(ecc, &((*T)[i+1]), &((*T)[i]));
+        GFNeg(ecc, (*T)[i+1].Y, (*T)[i+1].Y);
+        k[0]+=2;
+    }
 }
 
 void EcScalarMulwNAF(Ec* ecc, const EcPointProj* T, int windowSize, const BigInt k, EcPointProj* B) {
+    BigIntNAF naf;
+    ConvertBigIntTowNAF(ecc, k, windowSize, naf);
+    EcIdentityPointProj(ecc, B);
 
+    for (int i=ecc->bitLen; i>=0; i--) {
+        ecc->EcDouble(ecc, B, B);
+        if (naf[i] != 0) {
+            ecc->EcAdd(ecc, B, &(T[ abs(naf[i])/2 + (naf[i] < 0) ]), B);
+        }
+    }
 }
 
 void EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {

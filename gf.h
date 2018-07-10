@@ -38,6 +38,8 @@ void imul(u64 n, const u64* a, const u64* b, u64* c);
 void sqr(u64 n, const u64* a, u64* res);
 int word_bit_len(u64 w);
 int bigint_bit_len(u64 n, const u64* a);
+u64 sub_word(u64 n, const u64* a, const u64 b, u64* c);
+u64 add_word(u64 n, const u64* a, const u64 b, u64* c);
 
 void divide(u64 n, const u64* a, const u64* b, u64* quotient, u64* reminder);
 int cmp(u64 n, const u64* a, const u64* b);
