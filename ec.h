@@ -71,6 +71,8 @@ void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest);
 #define FIPS_521 0xF521
 #define FIPS_NOT_STANDARD 0xF000
 
+#define WINDOW_SIZE 4
+
 typedef struct _Ec {
     GFElement d, a, b;
     BOOL isEdwards;
@@ -128,14 +130,40 @@ void EcDouble(Ec* ecc, const EcPoint* A, EcPoint* B);
 void EcAddProj(Ec* ecc, const EcPointProj* A, const EcPointProj* B, EcPointProj* C);
 void EcDoubleProj(Ec* ecc, const EcPointProj* A, EcPointProj* B);
 
-/*
-Precomputation: 0P, 1P, ... (2^w - 1)P
-Result: Q = kP
-Q <- 0P
-for i from m/w downto 0 do
-    Q <- (2^w)Q
-    Q <- Q + k[i]P
+
+/* 
+Scalar Multiplications(all in the projective coordinates):
+    - AddAndDouble naive:
+    Result: Q = kP
+    Q <- 0P
+    H <- 1P
+    for i from 0 to m do
+        if k[i] = 1
+            Q <- Q + H
+        H <- 2H
+
+    - Montgomery constant-time:
+    Result: Q = kP
+    Q <- 0P
+    H <- 1P
+    for i from 0 to m do
+        if k[i] = 0
+            H <- H + Q
+            Q <- 2Q
+        else 
+            Q <- H + Q
+            H <- 2H 
+    - Windowed constant time for Edwards:
+    Precomputation: 0P, 1P, ... (2^w - 1)P
+    Result: Q = kP
+    Q <- 0P
+    for i from m/w downto 0 do
+        Q <- (2^w)Q
+        Q <- Q + k[i]P
+
+    - wNAF(not tested) 
 */
+
 void EcScalarMulWindowedPrecomputation(Ec* ecc, const EcPoint* A, EcPointProj** T, int windowSize);
 void EcScalarMulWindowed(Ec* ecc, const EcPointProj* T, int windowSize, const BigInt k, EcPointProj* B);
 
@@ -143,33 +171,15 @@ void EcScalarMulWindowed(Ec* ecc, const EcPointProj* T, int windowSize, const Bi
 void EcScalarMulwNAFPrecomputation(Ec* ecc, const EcPoint* A, EcPointProj** T, int windowSize);
 void EcScalarMulwNAF(Ec* ecc, const EcPointProj* T, int windowSize, const BigInt k, EcPointProj* B);
 
-/*
-Result: Q = kP
-Q <- 0P
-H <- 1P
-for i from 0 to m do
-    if k[i] = 1
-        Q <- Q + H
-    H <- 2H
-*/
 void EcScalarMulNaive(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
 
-/*
-Result: Q = kP
-Q <- 0P
-H <- 1P
-for i from 0 to m do
-    if k[i] = 0
-        H <- H + Q
-        Q <- 2Q
-    else 
-        Q <- H + Q
-        H <- 2H 
-*/
 void EcScalarMulMontgomery(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
 
-void EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B);
-void EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B);
+/* Fast windowed ScalarMul */
+void EcScalarMulByBasePoint(Ec* ecc, const BigInt k, EcPoint* B);
+
+/* Not so fast, but constant time Montgomery ladder */
+void EcScalarMul(Ec* ecc, const EcPoint * A, const BigInt k, EcPoint * B);
 
 #ifdef __cplusplus
 }

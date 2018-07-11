@@ -11,7 +11,7 @@ int EcDsaGenerateKey(Ec* ecc, BigInt key, EcPoint* Q) {
     while (GFCmp(ecc, key, ecc->n) == 1) {
         GFSub(ecc, key, ecc->n, key);
     }
-    EcScalarMul(ecc, &(ecc->BasePoint), key, Q);
+    EcScalarMulByBasePoint(ecc, key, Q);
     return 0;
 }
 
@@ -26,7 +26,7 @@ int EcDsaSign(Ec* ecc, const BigInt key, const BigInt hash, EcSignature* signatu
         GFSub(ecc, k, ecc->n, k);
     }
 
-    EcScalarMul(ecc, &(ecc->BasePoint), k, &P); // (x1, y1) = k*P
+    EcScalarMulByBasePoint(ecc, k, &P); // (x1, y1) = k*P
 
     if (GFCmp(ecc, P.x, zero) == 0) {
         goto gen_k; 
@@ -59,10 +59,10 @@ int EcDsaVerify(Ec* ecc, const EcPoint* Q, const BigInt hash, const EcSignature*
 
     EcPointProj P_p, Q_p;
     EcPoint P;
-    EcConvertAffineToProjective(ecc, &(ecc->BasePoint), &P_p);
+
     EcConvertAffineToProjective(ecc, Q, &Q_p);
     EcScalarMulNaive(ecc, &Q_p, u2, &Q_p);
-    EcScalarMulNaive(ecc, &P_p, u1, &P_p);
+    EcScalarMulWindowed(ecc, ecc->T, WINDOW_SIZE, u1, &P_p);
     EcAddProj(ecc, &P_p, &Q_p, &P_p); // P = u1*G + u2*Q
     EcConvertProjectiveToAffine(ecc, &P_p, &P);
 

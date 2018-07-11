@@ -19,7 +19,7 @@ void PRNGInit(PRNG* generator, unsigned char* seed, int seed_len) {
 }
 
 void PRNGRun(PRNG* generator) {
-    generator->state[0] ^= 1;
+    generator->state[0] ^= rand();
 }
 
 void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest) {
@@ -135,7 +135,7 @@ int EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const Big
     ecc->EcDouble = EcEdDoubleProj;
 
     copy(ecc->d, d, ecc->wordLen);
-    EcScalarMulWindowedPrecomputation(ecc, &(ecc->BasePoint), &(ecc->T), 4);
+    EcScalarMulWindowedPrecomputation(ecc, &(ecc->BasePoint), &(ecc->T), WINDOW_SIZE);
     return 0;
 }
 
@@ -148,7 +148,7 @@ int EcWInit(EcW* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigIn
 
     copy(ecc->a, a, ecc->wordLen);
     copy(ecc->b, b, ecc->wordLen);
-    EcScalarMulWindowedPrecomputation(ecc, &(ecc->BasePoint), &(ecc->T), 4);
+    EcScalarMulWindowedPrecomputation(ecc, &(ecc->BasePoint), &(ecc->T), WINDOW_SIZE);
     return 0;
 }
 
@@ -634,14 +634,16 @@ void EcScalarMulwNAF(Ec* ecc, const EcPointProj* T, int windowSize, const BigInt
     }
 }
 
-void EcScalarMulProj(Ec* ecc, const EcPointProj* A, const BigInt k, EcPointProj* B) {
-    EcScalarMulMontgomery(ecc, A, k, B);
+void EcScalarMulByBasePoint(Ec* ecc, const BigInt k, EcPoint* B) {
+    EcPointProj B_p;
+    EcScalarMulWindowed(ecc, ecc->T, WINDOW_SIZE, k, &B_p);
+    EcConvertProjectiveToAffine(ecc, &B_p, B);
 }
 
 void EcScalarMul(Ec* ecc, const EcPoint* A, const BigInt k, EcPoint* B) {
     EcPointProj A_p, B_p;
     EcConvertAffineToProjective(ecc, A, &A_p);
-    EcScalarMulWindowed(ecc, ecc->T, 4, k, &B_p);
+    EcScalarMulMontgomery(ecc, &A_p, k, &B_p);
     EcConvertProjectiveToAffine(ecc, &B_p, B);
 }
 
