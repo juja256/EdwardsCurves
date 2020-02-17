@@ -953,9 +953,6 @@ void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b) {
 void GFMulByD(const EcEd* ecc, GFElement a) {    
     VeryBigInt t;
     switch (ecc->curve_id) {
-        case ED_NOT_STANDARD:
-            GFMul(ecc, a, ecc->d, a);
-            break;
         case ED_192: 
             memset(t, 0, ecc->wordLen*8*2);
             mul_by_word(ecc->wordLen, a, ecc->d[0], t);
@@ -980,6 +977,45 @@ void GFMulByD(const EcEd* ecc, GFElement a) {
             memset(t, 0, ecc->wordLen*8*2);
             mul_by_word(ecc->wordLen, a, ecc->d[0], t);
             GFReduct_FIPS521(ecc, t, a);
+            break;
+        default:
+            GFMul(ecc, a, ecc->d, a);
+            break;
+    }
+}
+
+void GFMulByA(const EcEd* ecc, GFElement a, GFElement res) {
+    if (ecc->a[0] == 1) return;
+    if (ecc->a[0] == 2) return GFMulBy2(ecc, a, res);
+    VeryBigInt t;
+    switch (ecc->curve_id) {            
+        case ED_192: 
+            memset(t, 0, ecc->wordLen*8*2);
+            mul_by_word(ecc->wordLen, a, ecc->a[0], t);
+            GFReduct_FIPS192(ecc, t, res);
+            break;
+        case ED_224:
+            memset(t, 0, ecc->wordLen*8*2);
+            mul_by_word(ecc->wordLen, a, ecc->a[0], t);
+            GFReduct_FIPS224(ecc, t, res);
+            break;
+        case ED_256:
+            memset(t, 0, ecc->wordLen*8*2);
+            mul_by_word(ecc->wordLen, a, ecc->a[0], t);
+            GFReduct_FIPS256(ecc, t, res);
+            break;
+        case ED_384:
+            memset(t, 0, ecc->wordLen*8*2);
+            mul_by_word(ecc->wordLen, a, ecc->a[0], t);
+            GFReduct_FIPS384(ecc, t, res);
+            break;
+        case ED_521:
+            memset(t, 0, ecc->wordLen*8*2);
+            mul_by_word(ecc->wordLen, a, ecc->a[0], t);
+            GFReduct_FIPS521(ecc, t, res);
+            break;
+        default:
+            GFMul(ecc, a, ecc->a, res);
             break;
     }
 }
