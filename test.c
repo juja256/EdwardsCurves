@@ -25,14 +25,18 @@ double GetTickCount(void)
 #include <assert.h>
 
 
-void test_ariphmetic(u64 bit_len, int isEdwards) {
+void test_ariphmetic(u32 curve_id) {
+
     Ec cur;
     EcPoint G, H, Z;
     EcPointProj B, A;
     BigInt n, d, p;
     GFElement e3, e4, X;
     char name[60];
-    int r = EcInitStandardCurve(&cur, bit_len, isEdwards);
+    int r = EcInitStandardCurveById(&cur, curve_id);
+    if (r != 0) {
+        printf("Curve init error: %d\n", r);
+    }
     EcDump(&cur, name);
     printf("--- %s ---\n", name);
 
@@ -60,12 +64,12 @@ void test_ariphmetic(u64 bit_len, int isEdwards) {
     GFDump(&cur, H.y);
 }
 
-void test_eddsa(u64 bit_len, int isEdwards) {
+void test_eddsa(u32 curve_id) {
     double s1, e1, s2, e2;
     Ec cur;
     char name[60];
     
-    EcInitStandardCurve(&cur, bit_len, isEdwards);
+    EcInitStandardCurveById(&cur, curve_id);
     EcDump(&cur, name);
     printf("--- %s ---\n", name);
 
@@ -209,30 +213,44 @@ void test_sha3() {
 int main() {
     
 	printf("------- Testing EC Arithmetic -------\n");
-    test_ariphmetic(192, 0);
-    test_ariphmetic(192, 1);
-    test_ariphmetic(224, 0);
-    test_ariphmetic(224, 1);
-    test_ariphmetic(256, 0);
-    test_ariphmetic(256, 1);
-    test_ariphmetic(384, 0);
-    test_ariphmetic(384, 1);
-    test_ariphmetic(521, 0);
-    test_ariphmetic(521, 1);
+    test_ariphmetic(UA_256_1);
+    test_ariphmetic(UA_256_2);
+    test_ariphmetic(UA_256_3);
+    test_ariphmetic(UA_256_4);
+    test_ariphmetic(UA_256_5);
 
-    printf("------- Testing ECDSA -------\n");
-    test_eddsa(192, 0);
-    test_eddsa(192, 1);
-    test_eddsa(224, 0);
-    test_eddsa(224, 1);
-    test_eddsa(256, 0);
-    test_eddsa(256, 1);
-    test_eddsa(384, 0);
-    test_eddsa(384, 1);
-    test_eddsa(521, 0);
-    test_eddsa(521, 1);
+    test_ariphmetic(UA_384_1);
+    test_ariphmetic(UA_384_2);
+    test_ariphmetic(UA_384_3);
+    test_ariphmetic(UA_384_4);
+    test_ariphmetic(UA_384_5);
+    
+    test_ariphmetic(UA_512_1);
+    test_ariphmetic(UA_512_2);
+    test_ariphmetic(UA_512_3);
+    test_ariphmetic(UA_512_4);
+    test_ariphmetic(UA_512_5);
 
-    test_sha3();
+    printf("------- Testing Digital Signature -------\n");
+    test_eddsa(UA_256_1);
+    test_eddsa(UA_256_2);
+    test_eddsa(UA_256_3);
+    test_eddsa(UA_256_4);
+    test_eddsa(UA_256_5);
+
+    test_eddsa(UA_384_1);
+    test_eddsa(UA_384_2);
+    test_eddsa(UA_384_3);
+    test_eddsa(UA_384_4);
+    test_eddsa(UA_384_5);
+
+    test_eddsa(UA_512_1);
+    test_eddsa(UA_512_2);
+    test_eddsa(UA_512_3);
+    test_eddsa(UA_512_4);
+    test_eddsa(UA_512_5);
+
+    // test_sha3();
     #ifdef _WIN64
     system("pause");
     #endif

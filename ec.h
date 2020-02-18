@@ -51,8 +51,11 @@ void PRNGInit(PRNG* generator, unsigned char* seed, int len);
 void PRNGRun(PRNG* generator); 
 void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest);
 
+#define INVALID_D -2
+#define INVALID_A -3
+
 /* Elliptic curve in Edwards:
-    x^2 + y^2 = 1 + d*x^2*y^2
+    x^2 + a*y^2 = 1 + d*x^2*y^2
    or in Weierstrass form:
     y^2 = x^3 + a*x + b 
 */
@@ -71,23 +74,23 @@ void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest);
 #define FIPS_521 0xF521
 #define FIPS_NOT_STANDARD 0xF000
 
-#define UA_256_1 0x75612561 // UA 256/1
-#define UA_256_2 0x75612562 // UA 256/2
-#define UA_256_3 0x75612563 // UA 256/3
-#define UA_256_4 0x75612564 // UA 256/4
-#define UA_256_5 0x75612565 // UA 256/5
+#define UA_256_1 0x17561256 // UA 256/1
+#define UA_256_2 0x27561256 // UA 256/2
+#define UA_256_3 0x37561256 // UA 256/3
+#define UA_256_4 0x47561256 // UA 256/4
+#define UA_256_5 0x57561256 // UA 256/5
 
-#define UA_384_1 0x75613841 // UA 384/1
-#define UA_384_2 0x75613842 // UA 384/2
-#define UA_384_3 0x75613843 // UA 384/3
-#define UA_384_4 0x75613844 // UA 384/4
-#define UA_384_5 0x75613845 // UA 384/5
+#define UA_384_1 0x17561384 // UA 384/1
+#define UA_384_2 0x27561384 // UA 384/2
+#define UA_384_3 0x37561384 // UA 384/3
+#define UA_384_4 0x47561384 // UA 384/4
+#define UA_384_5 0x57561384 // UA 384/5
 
-#define UA_512_1 0x75615121 // UA 512/1
-#define UA_512_2 0x75615122 // UA 512/2
-#define UA_512_3 0x75615123 // UA 512/3
-#define UA_512_4 0x75615124 // UA 512/4
-#define UA_512_5 0x75615125 // UA 512/5
+#define UA_512_1 0x17561512 // UA 512/1
+#define UA_512_2 0x27561512 // UA 512/2
+#define UA_512_3 0x37561512 // UA 512/3
+#define UA_512_4 0x47561512 // UA 512/4
+#define UA_512_5 0x57561512 // UA 512/5
 
 #define WINDOW_SIZE 4
 
@@ -121,10 +124,11 @@ typedef Ec EcW;
 
 
 int  EcEdInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement d);
-int  EcEdTwistedUAInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement d);
+int  EcEdTwistedUAInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement d, u32 curve_id);
 int  EcWInit(EcW* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, const BigInt n, const GFElement a, const GFElement b);
 
 int  EcInitStandardCurve(Ec* ecc, u64 bitLen, BOOL isEdwards);
+int  EcInitStandardCurveById(Ec* ecc, u32 id);
 
 void EcGenerateBasePoint(Ec* ecc, EcPoint* bp);
 

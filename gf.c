@@ -486,7 +486,8 @@ void GFAdd(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
     switch (ecc->bitLen) {
         case 192:
         case 256:
-        case 384: {
+        case 384:
+        case 512: {
             carry = add(ecc->wordLen, a,b,c);
             if (carry) {
                 sub(ecc->wordLen, c, ecc->p, c);
@@ -513,7 +514,8 @@ void GFSub(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
     switch (ecc->bitLen) {
         case 192:
         case 256:
-        case 384: {
+        case 384:
+        case 512: {
             borrow = sub(ecc->wordLen, a, b, c);
             if (borrow) {
                 add(ecc->wordLen, c, ecc->p, c);
