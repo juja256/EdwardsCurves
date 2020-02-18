@@ -157,10 +157,10 @@ int EcEdTwistedUAInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, 
     copy(pp, ecc->p, ecc->wordLen);
     div2(ecc->wordLen, pp);
     GFPow(ecc, ecc->d, pp, tmp);
-    if (GFCmp(ecc, tmp, unity)) return INVALID_D; // invalid d
+    if (GFCmp(ecc, tmp, unity) == 0) return INVALID_D; // invalid d
 
     GFPow(ecc, ecc->a, pp, tmp);
-    if (GFCmp(ecc, tmp, unity)) return INVALID_A; // invalid a
+    if (GFCmp(ecc, tmp, unity) == 0) return INVALID_A; // invalid a
 
     return 0;
 }
@@ -334,7 +334,7 @@ int EcDoubleAf(Ec* ecc, const EcPoint* A, EcPoint* B) {
 /* y^2 = (1 - x^2)/(1 - dx^2) */
 void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp) {
     PRNGGenerateSequence( &ecc->prng, ecc->bitLen, (u8*)(bp->x) );
-    int y = 0;
+    int isEqual = 0;
     GFElement t1, t2, t3, pp;
     copy(pp, ecc->p, ecc->wordLen);
     div2(ecc->wordLen, pp);
@@ -349,8 +349,8 @@ void EcEdGenerateBasePoint(EcEd* ecc, EcPoint* bp) {
         GFInv(ecc, t1, t1);
         GFMul(ecc, t1, t2, t1);
         GFPow(ecc, t1, pp, t2);
-        y = !GFCmp(ecc, t2, unity);
-        if (!y)
+        isEqual = !GFCmp(ecc, t2, unity);
+        if (!isEqual)
             GFAdd(ecc, bp->x, unity, bp->x);
         else break;
     } while(1);
