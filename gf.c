@@ -1059,3 +1059,14 @@ int GFCmp(const Ec* ecc, const GFElement a, const GFElement b) {
     }
     return 0;
 }
+
+int GFLegendreSymbol(const Ec* ecc, const GFElement a) {
+    GFElement pp, tmp;
+    copy(pp, ecc->p, ecc->wordLen);
+    div2(ecc->wordLen, pp);
+    GFPow(ecc, a, pp, tmp);
+    if (GFCmp(ecc, tmp, unity) == 0) {
+        return 1;
+    }
+    return -1;
+}

@@ -1,6 +1,7 @@
 #include "ec.h"
 #include "gf.h"
 #include "dsa.h"
+#include "ecdh.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -93,6 +94,45 @@ void test_eddsa(u32 curve_id) {
     GFDump(&cur, sig.r);
     GFDump(&cur, sig.s);
     printf("Signature Verification status: %d, time: %lf\n", s, e2-s2);
+}
+
+void test_uakem(u32 curve_id) {
+    double s1, e1, s2, e2;
+    int enc_res, dec_res;
+    Ec cur;
+    char name[60];
+    char msg[128];
+
+    EcInitStandardCurveById(&cur, curve_id);
+    EcDump(&cur, name);
+    printf("--- %s ---\n", name);
+
+    EcSignature sig;
+    BigInt hash, key;
+    EcPoint Q;
+    Ciphertext C;
+    memset(hash, 0, 7*8);
+    strcpy((char*)hash, "Gopher" );
+
+    s1 = GetTickCount();
+    UaKemGeneratePrivateKey(&cur, key, &Q);
+    e1 = GetTickCount();
+    enc_res = UaKemEncrypt(&cur, &Q, hash, strlen(hash), &C);
+    s2 = GetTickCount();
+    dec_res = UaKemDecrypt(&cur, key, &Q, &C, msg);
+    e2 = GetTickCount();
+    printf("Generated UAKEM keypair (key, Q), time: %lf\n", e1-s1);
+    GFDump(&cur, key);
+    GFDump(&cur, Q.x);
+    GFDump(&cur, Q.y);
+    printf("UAKEM Encrypt (r, t) for hash: %s, status: %d, time: %lf\n", (char*)hash, enc_res, s2-e1);
+    GFDump(&cur, C.r);
+    GFDump(&cur, C.t);
+    if (memcmp(hash, msg, strlen(hash)) != 0) {
+        printf("UAKEM Decrypt error (message: \"%s\", expected: \"%s\")\n", msg, hash);   
+    }
+    printf("UAKEM Decrypt status: %d, time: %lf\n", dec_res, e2-s2);
+
 }
 
 static const char* hexConvTab = "0123456789abcdef";
@@ -231,24 +271,24 @@ int main() {
     test_ariphmetic(UA_512_4);
     test_ariphmetic(UA_512_5);
 
-    printf("------- Testing Digital Signature -------\n");
-    test_eddsa(UA_256_1);
-    test_eddsa(UA_256_2);
-    test_eddsa(UA_256_3);
-    test_eddsa(UA_256_4);
-    test_eddsa(UA_256_5);
+    printf("------- Testing UA Key Encapsulation Mechanism -------\n");
+    test_uakem(UA_256_1);
+    test_uakem(UA_256_2);
+    test_uakem(UA_256_3);
+    test_uakem(UA_256_4);
+    test_uakem(UA_256_5);
 
-    test_eddsa(UA_384_1);
-    test_eddsa(UA_384_2);
-    test_eddsa(UA_384_3);
-    test_eddsa(UA_384_4);
-    test_eddsa(UA_384_5);
+    test_uakem(UA_384_1);
+    test_uakem(UA_384_2);
+    test_uakem(UA_384_3);
+    test_uakem(UA_384_4);
+    test_uakem(UA_384_5);
 
-    test_eddsa(UA_512_1);
-    test_eddsa(UA_512_2);
-    test_eddsa(UA_512_3);
-    test_eddsa(UA_512_4);
-    test_eddsa(UA_512_5);
+    test_uakem(UA_512_1);
+    test_uakem(UA_512_2);
+    test_uakem(UA_512_3);
+    test_uakem(UA_512_4);
+    test_uakem(UA_512_5);
 
     // test_sha3();
     #ifdef _WIN64

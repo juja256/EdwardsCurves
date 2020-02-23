@@ -92,6 +92,18 @@ void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest);
 #define UA_512_4 0x47561512 // UA 512/4
 #define UA_512_5 0x57561512 // UA 512/5
 
+#define KUPYNA_HASH 0x01
+
+#define P256_HASH_SIZE 32
+#define P384_HASH_SIZE 64
+#define P512_HASH_SIZE 64
+
+#define HASH_ID_SIZE 8
+
+#define P256_MAX_MSG_SIZE (256-P256_HASH_SIZE-HASH_ID_SIZE)
+#define P384_MAX_MSG_SIZE (384-P384_HASH_SIZE-HASH_ID_SIZE)
+#define P512_MAX_MSG_SIZE (512-P512_HASH_SIZE-HASH_ID_SIZE)
+
 #define WINDOW_SIZE 4
 
 typedef struct _Ec {
@@ -117,6 +129,11 @@ typedef struct _Ec {
     PRNG prng;
 
     EcPointProj* T; // for precomputations
+
+    u32 hash_id;
+
+    unsigned max_msg_size;
+    unsigned hash_out_size;
 } Ec;
 
 typedef Ec EcEd;

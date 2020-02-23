@@ -35,12 +35,13 @@ Authors: Ruslan Kiianchuk, Ruslan Mordvinov, Roman Oliynykov
 
 #define BITS_IN_BYTE 8
 
+typedef unsigned char uint8_t;
+typedef unsigned long long uint64_t;
+
 extern uint8_t mds_matrix[8][8];
 
 extern uint8_t sboxes[4][256];
 
-typedef unsigned char uint8_t;
-typedef unsigned long long uint64_t;
 typedef struct {
     uint8_t state[NB_1024][ROWS];  ///< Hash function internal state (of maximum possible size to fit for all modes of operation).
     size_t nbytes;  ///< Number of bytes currently located in state.

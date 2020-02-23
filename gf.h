@@ -67,6 +67,7 @@ void GFMulBy2Power(const Ec* ecc, const GFElement a, int pp, GFElement b);
 #define GFMulBy2(e, a, b) GFAdd(e, a, a, b);
 void GFMulByD(const EcEd* ecc, GFElement a);
 void GFMulByA(const EcEd* ecc, GFElement a, GFElement res);
+int GFLegendreSymbol(const Ec* ecc, const GFElement a);
 
 void GFMul_Cmn(const Ec* ecc, const GFElement a, const GFElement b, GFElement c);
 void GFMul_FIPS192(const Ec* ecc, const GFElement a, const GFElement b, GFElement c);

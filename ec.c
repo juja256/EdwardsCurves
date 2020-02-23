@@ -144,6 +144,7 @@ int EcEdTwistedUAInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, 
     ecc->isEdwards = 1;
     BaseEcInit(ecc, bitLen, p, bp, n);
     ecc->curve_id = curve_id;
+    ecc->hash_id = KUPYNA_HASH;
     ecc->EcAdd = EcEdAddProj;
     ecc->EcDouble = EcEdDoubleProj;
 
@@ -161,7 +162,24 @@ int EcEdTwistedUAInit(EcEd* ecc, u64 bitLen, const BigInt p, const EcPoint* bp, 
 
     GFPow(ecc, ecc->a, pp, tmp);
     if (GFCmp(ecc, tmp, unity) == 0) return INVALID_A; // invalid a
-
+    switch (ecc->bitLen)
+    {
+    case 256:
+        ecc->max_msg_size = P256_MAX_MSG_SIZE;
+        ecc->hash_out_size = P256_HASH_SIZE;
+        break;
+    case 384:
+        ecc->max_msg_size = P384_MAX_MSG_SIZE;
+        ecc->hash_out_size = P384_HASH_SIZE;
+        break;
+    case 512:
+        ecc->max_msg_size = P512_MAX_MSG_SIZE;
+        ecc->hash_out_size = P512_HASH_SIZE;
+        break;
+    default:
+        ecc->max_msg_size = 0;
+        ecc->hash_out_size = 0;
+    }
     return 0;
 }
 
@@ -920,7 +938,7 @@ int  EcInitStandardCurveById(Ec* ecc, u32 id) {
         case UA_384_2:
         GFInitFromString(p,  "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF115");
         GFInitFromString(n,  "400000000000000000000000000000000000000000000000231C4F8D91A6B595EAA0789F9CCFF3C7FA9F05F6C028EACF");
-        GFInitFromString(d,  "А8");
+        GFInitFromString(d,  "A8");
         GFInitFromString(G.y,"89FD5124BBCFC2FBFA908A0A2F8D46E9A443EA0D34A8101CC28EA068C32EEA2A49466ECEDD25E2DABECBDE0B016C8ACD");
         GFInitFromString(G.x,"45DF45F8020CA03A0DE417410BDA8BFB795A653450104321344EFB9A1C5086B25A970EC79ED51DCA9D362AFF9A86F528");
         break;
