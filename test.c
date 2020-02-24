@@ -101,7 +101,7 @@ void test_uakem(u32 curve_id) {
     int enc_res, dec_res;
     Ec cur;
     char name[60];
-    char msg[128];
+    unsigned char msg[128];
 
     EcInitStandardCurveById(&cur, curve_id);
     EcDump(&cur, name);
@@ -111,13 +111,15 @@ void test_uakem(u32 curve_id) {
     BigInt hash, key;
     EcPoint Q;
     Ciphertext C;
-    memset(hash, 0, 7*8);
-    strcpy((char*)hash, "Gopher" );
+    copy(hash, zero, 10);
+    hash[0] = 0x7;
+    unsigned msg_sz = 1;
+    //strcpy((char*)hash, "Gopher" );
 
     s1 = GetTickCount();
     UaKemGeneratePrivateKey(&cur, key, &Q);
     e1 = GetTickCount();
-    enc_res = UaKemEncrypt(&cur, &Q, hash, strlen(hash), &C);
+    enc_res = UaKemEncrypt(&cur, &Q, (unsigned char*)hash, msg_sz, &C);
     s2 = GetTickCount();
     dec_res = UaKemDecrypt(&cur, key, &Q, &C, msg);
     e2 = GetTickCount();
@@ -128,7 +130,7 @@ void test_uakem(u32 curve_id) {
     printf("UAKEM Encrypt (r, t) for hash: %s, status: %d, time: %lf\n", (char*)hash, enc_res, s2-e1);
     GFDump(&cur, C.r);
     GFDump(&cur, C.t);
-    if (memcmp(hash, msg, strlen(hash)) != 0) {
+    if (memcmp(hash, msg, msg_sz) != 0) {
         printf("UAKEM Decrypt error (message: \"%s\", expected: \"%s\")\n", msg, hash);   
     }
     printf("UAKEM Decrypt status: %d, time: %lf\n", dec_res, e2-s2);

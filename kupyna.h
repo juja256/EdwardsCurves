@@ -13,6 +13,9 @@ Authors: Ruslan Kiianchuk, Ruslan Mordvinov, Roman Oliynykov
 #include <stdlib.h>
 #include <limits.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define ROWS 8
 #define NB_512 8  ///< Number of 8-byte words in state for <=256-bit hash code.
@@ -88,5 +91,9 @@ void KupynaHash(kupyna_t* ctx, uint8_t* data, size_t msg_nbits, uint8_t* hash_co
  * @return return Non-zero value in case of error, 0 in case of success.
  */
 int KupynaKmac(kupyna_t* ctx, uint8_t* key, size_t digest_nbits, uint8_t* data, size_t msg_nbits, uint8_t* digest);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* SRC_KUPYNA_H_ */

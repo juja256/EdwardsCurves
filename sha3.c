@@ -5,7 +5,7 @@
 #define w 64
 #define WORD unsigned long long
 
-static inline void xor(BYTE* acc, const BYTE* other, unsigned size) {
+static inline void xor_(BYTE* acc, const BYTE* other, unsigned size) {
     WORD* acc_ = (WORD*)acc;
     WORD* other_ = (WORD*)other;
     for (unsigned i=0; i<size/8; i++) {
@@ -24,7 +24,7 @@ static void dump(KeccakState st) {
 
 #define A(x,y,z) (( (*state)[5*(y)+(x)] & (1 << (z))) >> (z)) 
 #define Parity(x,z) (A(x, 0, z) ^ A(x, 1, z) ^ A(x, 2, z) ^ A(x, 3, z) ^ A(x, 4, z))
-#define Axor(x,y,z,b) (*state)[5*(y)+(x)] ^= ((b) << (z))
+#define Axor_(x,y,z,b) (*state)[5*(y)+(x)] ^= ((b) << (z))
 #define Mod(x,n) ( x%n )
 #define Lane(x, y) (*state)[5*(y)+(x)]
 
@@ -262,7 +262,7 @@ void SpoongeAbsorb( KeccakSpoonge* spoonge, const BYTE* inBuf, unsigned size ) {
     }
 
     for (unsigned i=0; i<size / spoonge->r; i++) {
-        xor(statePtr, inBuf + i*spoonge->r, spoonge->r);
+        xor_(statePtr, inBuf + i*spoonge->r, spoonge->r);
         spoonge->keccak_p(&spoonge->state);
     }
 

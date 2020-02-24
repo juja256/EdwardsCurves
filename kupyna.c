@@ -361,7 +361,7 @@ int KupynaKmac(kupyna_t* ctx, uint8_t* key, size_t digest_nbits, uint8_t* data, 
     if (mpad.data_nbytes > 0) {
         total_nbytes += kpad.data_nbytes;
     }
-    input = calloc(total_nbytes, sizeof(uint8_t));
+    input = (uint8_t*)calloc(total_nbytes, sizeof(uint8_t));
 
     if (kpad.data_nbytes > 0) {
         memcpy(input, key, digest_nbits / 8);

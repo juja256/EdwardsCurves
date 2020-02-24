@@ -2,8 +2,10 @@
 #include "ec.h"
 #include "gf.h"
 #include "kupyna.h"
+#include "KupinaEngine.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define DH_SUCCESS 0
 #define DH_FAIL -1
@@ -32,11 +34,21 @@ int EcDhEndKeyNegotiation(Ec* ecc, EcPoint* P_enc, BigInt d_A, EcPoint* P_secret
 }
 
 int UaKemGeneratePrivateKey(Ec* ecc, BigInt d, EcPoint* Q) {
+    #ifdef UAKEM_DEBUG
+    copy(d, zero, ecc->wordLen);
+    d[0] = 0x25;
+    #else
     PRNGGenerateSequence(&ecc->prng, ecc->bitLen, (unsigned char*)d);
     while (GFCmp(ecc, d, ecc->n) == 1) {
         GFSub(ecc, d, ecc->n, d);
     }
+    #endif
     EcScalarMulByBasePoint(ecc, d, Q);
+    #ifdef UAKEM_DEBUG
+    printf("Q: \n");
+    GFDump(ecc, Q->x);
+    GFDump(ecc, Q->y);
+    #endif
     return 0;
 }
 
@@ -46,22 +58,48 @@ int UaKemEncrypt(Ec* ecc, EcPoint* Q, unsigned char* msg, unsigned size, Ciphert
 
     BigInt M;
     kupyna_t kupyna_engine;
+    KupinaEngine kupyna_engine2(ecc->hash_out_size);
     if ((ecc->hash_id != KUPYNA_HASH) || (KupynaInit(ecc->hash_out_size, &kupyna_engine) != 0)) return HASH_ERROR;
     
     copy(M, zero, ecc->wordLen); // prepare zero padded
     memcpy(M, msg, size); // copy message to lower part
-    KupynaHash(&kupyna_engine, (uint8_t*)M, ecc->max_msg_size, (uint8_t*)M + ecc->max_msg_size/8); // set hash
+    //KupynaHash(&kupyna_engine, (uint8_t*)M, ecc->max_msg_size, (uint8_t*)M + ecc->max_msg_size/8); // set hash
+    kupyna_engine2.update((unsigned char*)M, ecc->max_msg_size/8);
+    kupyna_engine2.finalDigest((unsigned char*)M + ecc->max_msg_size/8);
     *((uint8_t*)M + ecc->bitLen/8 - 1) = (uint8_t)ecc->hash_id; // set hash id
-
+    #ifdef UAKEM_DEBUG
+    printf("M(m_size=%d): \n", ecc->max_msg_size);
+    GFDump(ecc, M);
+    #endif
     BigInt epsilon;
     GFElement t;
     EcPoint R, T;
+    #ifndef UAKEM_DEBUG
     PRNGGenerateSequence(&ecc->prng, ecc->bitLen-2, (unsigned char*)epsilon); // generate one time epsilon
+    #else
+    copy(epsilon, zero, ecc->wordLen);
+    epsilon[0] = 7;
+    #endif
     EcScalarMulByBasePoint(ecc, epsilon, &R); // R = εP
+    #ifdef UAKEM_DEBUG
+    printf("R: \n");
+    GFDump(ecc, R.x);
+    GFDump(ecc, R.y);
+    #endif
     EcScalarMul(ecc, Q, epsilon, &T);
+    #ifdef UAKEM_DEBUG
+    printf("T: \n");
+    GFDump(ecc, T.x);
+    GFDump(ecc, T.y);
+    #endif
     GFMul(ecc, T.x, M, t); // t = xT * M mod p
     copy(C->r, R.x, ecc->wordLen);
     copy(C->t, t, ecc->wordLen);
+    #ifdef UAKEM_DEBUG
+    printf("C: \n");
+    GFDump(ecc, C->r);
+    GFDump(ecc, C->t);
+    #endif
     return ENCRYPT_SUCCESS;
 }
 
