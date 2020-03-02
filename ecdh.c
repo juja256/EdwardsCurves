@@ -2,7 +2,6 @@
 #include "ec.h"
 #include "gf.h"
 #include "kupyna.h"
-#include "KupinaEngine.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -58,14 +57,11 @@ int UaKemEncrypt(Ec* ecc, EcPoint* Q, unsigned char* msg, unsigned size, Ciphert
 
     BigInt M;
     kupyna_t kupyna_engine;
-    KupinaEngine kupyna_engine2(ecc->hash_out_size);
     if ((ecc->hash_id != KUPYNA_HASH) || (KupynaInit(ecc->hash_out_size, &kupyna_engine) != 0)) return HASH_ERROR;
     
     copy(M, zero, ecc->wordLen); // prepare zero padded
     memcpy(M, msg, size); // copy message to lower part
-    //KupynaHash(&kupyna_engine, (uint8_t*)M, ecc->max_msg_size, (uint8_t*)M + ecc->max_msg_size/8); // set hash
-    kupyna_engine2.update((unsigned char*)M, ecc->max_msg_size/8);
-    kupyna_engine2.finalDigest((unsigned char*)M + ecc->max_msg_size/8);
+    KupynaHash(&kupyna_engine, (uint8_t*)M, ecc->max_msg_size, (uint8_t*)M + ecc->max_msg_size/8); // set hash
     *((uint8_t*)M + ecc->bitLen/8 - 1) = (uint8_t)ecc->hash_id; // set hash id
     #ifdef UAKEM_DEBUG
     printf("M(m_size=%d): \n", ecc->max_msg_size);
