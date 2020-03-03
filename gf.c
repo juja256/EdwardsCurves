@@ -17,17 +17,17 @@
 #define MSB_M      0x8000000000000000
 #define HEX_FORMAT "%.16llX"
 
-const u64 unity[] = { 0x1, 0, 0, 0, 0, 0, 0, 0, 0 };
+const u64 unity[] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-const u64 zero[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  };
+const u64 zero[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-const EcPoint uPEd  = { { 1, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0} };
+const EcPoint uPEd  = { { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
 
-const EcPoint uPW  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0} };
+const EcPoint uPW  = { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
 
-const EcPointProj uPPEd = { { 1, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0}, { 1, 0, 0, 0, 0, 0, 0, 0, 0 } };
+const EcPointProj uPPEd = { { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
-const EcPointProj uPPW = { { 1, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0}, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+const EcPointProj uPPW = { { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
 
 const u64 p192[]  = { 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF };
 
@@ -487,7 +487,8 @@ void GFAdd(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
         case 192:
         case 256:
         case 384:
-        case 512: {
+        case 512:
+        case 768: {
             carry = add(ecc->wordLen, a,b,c);
             if (carry) {
                 sub(ecc->wordLen, c, ecc->p, c);
@@ -515,7 +516,8 @@ void GFSub(const Ec* ecc, const GFElement a, const GFElement b, GFElement c) {
         case 192:
         case 256:
         case 384:
-        case 512: {
+        case 512:
+        case 768: {
             borrow = sub(ecc->wordLen, a, b, c);
             if (borrow) {
                 add(ecc->wordLen, c, ecc->p, c);

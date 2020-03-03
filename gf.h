@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 
-extern const u64 unity[9];
+extern const u64 unity[12];
 extern const EcPoint uPEd;
 extern const EcPoint uPW;
 extern const EcPointProj uPPEd;
@@ -18,7 +18,7 @@ extern const u64 p224[4];
 extern const u64 p256[4];
 extern const u64 p384[6];
 extern const u64 p521[9];
-extern const u64 zero[20];
+extern const u64 zero[26];
 
 /* Common Arithmetics */
 

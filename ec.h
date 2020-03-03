@@ -13,9 +13,9 @@ typedef unsigned u32;
 typedef unsigned char u8;
 
 /* actually 521bit number needs only 9 words, but there is one additional word for signed numbers support */
-typedef u64 GFElement[10]; 
-typedef u64 BigInt[10]; // up to 640 bits
-typedef u64 VeryBigInt[20]; // up to 1280 bits
+typedef u64 GFElement[13]; 
+typedef u64 BigInt[13]; // up to 832 bits
+typedef u64 VeryBigInt[26]; // up to 2*832 bits
 
 typedef struct _EcPoint {
     GFElement x;
