@@ -12,10 +12,13 @@ typedef unsigned long long u64;
 typedef unsigned u32;
 typedef unsigned char u8;
 
+
+#define LIMBSNUM 14
+
 /* actually 521bit number needs only 9 words, but there is one additional word for signed numbers support */
-typedef u64 GFElement[13]; 
-typedef u64 BigInt[13]; // up to 832 bits
-typedef u64 VeryBigInt[26]; // up to 2*832 bits
+typedef u64 GFElement[LIMBSNUM]; 
+typedef u64 BigInt[LIMBSNUM]; // up to 832 bits
+typedef u64 VeryBigInt[2*LIMBSNUM]; // up to 2*832 bits
 
 typedef struct _EcPoint {
     GFElement x;
@@ -92,17 +95,25 @@ void PRNGGenerateSequence(PRNG* generator, int bit_len, unsigned char* dest);
 #define UA_512_4 0x47561512 // UA 512/4
 #define UA_512_5 0x57561512 // UA 512/5
 
+#define UA_768_1 0x17561768 // UA 768/1
+#define UA_768_2 0x27561768 // UA 768/2
+#define UA_768_3 0x37561768 // UA 768/3
+#define UA_768_4 0x47561768 // UA 768/4
+#define UA_768_5 0x57561768 // UA 768/5
+
 #define KUPYNA_HASH 0x01
 
 #define P256_HASH_SIZE 32
 #define P384_HASH_SIZE 64
 #define P512_HASH_SIZE 64
+#define P768_HASH_SIZE 128
 
 #define HASH_ID_SIZE 8
-
-#define P256_MAX_MSG_SIZE (256-P256_HASH_SIZE-HASH_ID_SIZE)
-#define P384_MAX_MSG_SIZE (384-P384_HASH_SIZE-HASH_ID_SIZE)
-#define P512_MAX_MSG_SIZE (512-P512_HASH_SIZE-HASH_ID_SIZE)
+#define MLEN_SIZE 16
+#define P256_MAX_MSG_SIZE (256-P256_HASH_SIZE-HASH_ID_SIZE-MLEN_SIZE)
+#define P384_MAX_MSG_SIZE (384-P384_HASH_SIZE-HASH_ID_SIZE-MLEN_SIZE)
+#define P512_MAX_MSG_SIZE (512-P512_HASH_SIZE-HASH_ID_SIZE-MLEN_SIZE)
+#define P768_MAX_MSG_SIZE (768-P768_HASH_SIZE-HASH_ID_SIZE-MLEN_SIZE)
 
 #define WINDOW_SIZE 4
 

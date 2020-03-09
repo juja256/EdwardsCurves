@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 
-extern const u64 unity[12];
+extern const u64 unity[13];
 extern const EcPoint uPEd;
 extern const EcPoint uPW;
 extern const EcPointProj uPPEd;

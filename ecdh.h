@@ -17,7 +17,7 @@ int EcDhEndKeyNegotiation(Ec* ecc, EcPoint* P_enc, BigInt d_A, EcPoint* P_secret
 
 int UaKemGeneratePrivateKey(Ec* ecc, BigInt d, EcPoint* Q);
 int UaKemEncrypt(Ec* ecc, EcPoint* Q, unsigned char* msg, unsigned size, Ciphertext* C);
-int UaKemDecrypt(Ec* ecc, BigInt d, EcPoint* Q, Ciphertext* C, unsigned char* msg);
+int UaKemDecrypt(Ec* ecc, BigInt e, EcPoint* Q, Ciphertext* C, unsigned char* msg, unsigned short* mlen);
 
 #ifdef __cplusplus
 }

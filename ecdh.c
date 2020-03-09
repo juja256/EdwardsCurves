@@ -19,6 +19,15 @@
 #define INVALID_C -5
 #define HASH_INTEGRITY_ERROR -6
 
+static void InvertBytes(unsigned char* a, unsigned sz) {
+    unsigned char tmp;
+    for (int i=0; i<sz/2; i++) {
+        tmp = a[i];
+        a[i] = a[sz-1-i];
+        a[sz-1-i] = tmp;
+    }
+}
+
 int EcDhStartKeyNegotiation(Ec* ecc, EcPoint* Q_B, BigInt d_A, EcPoint* P_enc) {
     if (!EcCheckPointInMainSubGroup(ecc, Q_B)) return DH_FAIL;
     EcScalarMul(ecc, Q_B, d_A, P_enc);
@@ -61,7 +70,10 @@ int UaKemEncrypt(Ec* ecc, EcPoint* Q, unsigned char* msg, unsigned size, Ciphert
     
     copy(M, zero, ecc->wordLen); // prepare zero padded
     memcpy(M, msg, size); // copy message to lower part
-    KupynaHash(&kupyna_engine, (uint8_t*)M, ecc->max_msg_size, (uint8_t*)M + ecc->max_msg_size/8); // set hash
+    unsigned short ML = size*8l; // calculate length
+    memcpy((uint8_t*)M + ecc->max_msg_size/8, &ML, 2); // set length
+    //InvertBytes((uint8_t*)M, ecc->max_msg_size/8 + 2);
+    KupynaHash(&kupyna_engine, (uint8_t*)M, ecc->max_msg_size+16, (uint8_t*)M + 2 + ecc->max_msg_size/8); // set hash
     *((uint8_t*)M + ecc->bitLen/8 - 1) = (uint8_t)ecc->hash_id; // set hash id
     #ifdef UAKEM_DEBUG
     printf("M(m_size=%d): \n", ecc->max_msg_size);
@@ -99,7 +111,7 @@ int UaKemEncrypt(Ec* ecc, EcPoint* Q, unsigned char* msg, unsigned size, Ciphert
     return ENCRYPT_SUCCESS;
 }
 
-int UaKemDecrypt(Ec* ecc, BigInt e, EcPoint* Q, Ciphertext* C, unsigned char* msg) {
+int UaKemDecrypt(Ec* ecc, BigInt e, EcPoint* Q, Ciphertext* C, unsigned char* msg, unsigned short* mlen) {
     if (!GFCmp(ecc, zero, C->r) || !GFCmp(ecc, unity, C->r)) return INVALID_R;
     GFElement x,y;
     GFSqr(ecc, C->r, x);
@@ -120,10 +132,11 @@ int UaKemDecrypt(Ec* ecc, BigInt e, EcPoint* Q, Ciphertext* C, unsigned char* ms
     GFMul(ecc, C->t, x, x); // x = t*x_inv
 
     kupyna_t kupyna_engine;
-    uint8_t hash[8];
+    uint8_t hash[16];
     if ((((uint8_t*)x)[ecc->bitLen/8 - 1] != KUPYNA_HASH) || (ecc->hash_id != KUPYNA_HASH) || (KupynaInit(ecc->hash_out_size, &kupyna_engine) != 0)) return HASH_ERROR;
-    KupynaHash(&kupyna_engine, (uint8_t*)x, ecc->max_msg_size, hash);
-    if (memcmp(hash, (uint8_t*)x + ecc->max_msg_size/8, ecc->hash_out_size/8) != 0) return HASH_INTEGRITY_ERROR;
-    memcpy(msg, x, ecc->max_msg_size/8);
+    KupynaHash(&kupyna_engine, (uint8_t*)x, ecc->max_msg_size+16, hash);
+    *mlen = *(unsigned short*)((uint8_t*)x + ecc->max_msg_size/8);
+    if (memcmp(hash, (uint8_t*)x + 2 + ecc->max_msg_size/8, ecc->hash_out_size/8) != 0) return HASH_INTEGRITY_ERROR;
+    memcpy(msg, x, *mlen/8);
     return DECRYPT_SUCCESS;
 }

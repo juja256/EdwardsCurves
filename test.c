@@ -49,14 +49,14 @@ void test_ariphmetic(u32 curve_id) {
     EcScalarMul(&cur, &(cur.BasePoint), cur.n, &H);
 
     s2 = GetTickCount();
-    for (int i=0;i<10;i++)
+    for (int i=0;i<5;i++)
         EcScalarMul(&cur, &(cur.BasePoint), cur.n, &H);
     e2 = GetTickCount();
     
     GFDump(&cur, H.x);
     GFDump(&cur, H.y);
 
-    printf("Scalar Mul, time: %lf\n", (e2-s2)/10);
+    printf("Scalar Mul, time: %lf\n", (e2-s2)/5);
 
     EcGenerateBasePoint(&cur, &H);
     isOnCurve = EcCheckPointInMainSubGroup(&cur, &H);
@@ -102,7 +102,7 @@ void test_uakem(u32 curve_id) {
     Ec cur;
     char name[60];
     unsigned char msg[128];
-
+    unsigned short mlen;
     EcInitStandardCurveById(&cur, curve_id);
     EcDump(&cur, name);
     printf("--- %s ---\n", name);
@@ -111,9 +111,9 @@ void test_uakem(u32 curve_id) {
     BigInt hash, key;
     EcPoint Q;
     Ciphertext C;
-    copy(hash, zero, 10);
+    copy(hash, zero, 13);
     hash[0] = 0x7;
-    unsigned msg_sz = 1;
+    unsigned msg_sz = 16; // 128bit
     //strcpy((char*)hash, "Gopher" );
 
     s1 = GetTickCount();
@@ -121,7 +121,7 @@ void test_uakem(u32 curve_id) {
     e1 = GetTickCount();
     enc_res = UaKemEncrypt(&cur, &Q, (unsigned char*)hash, msg_sz, &C);
     s2 = GetTickCount();
-    dec_res = UaKemDecrypt(&cur, key, &Q, &C, msg);
+    dec_res = UaKemDecrypt(&cur, key, &Q, &C, msg, &mlen);
     e2 = GetTickCount();
     printf("Generated UAKEM keypair (key, Q), time: %lf\n", e1-s1);
     GFDump(&cur, key);
@@ -131,7 +131,7 @@ void test_uakem(u32 curve_id) {
     GFDump(&cur, C.r);
     GFDump(&cur, C.t);
     if (memcmp(hash, msg, msg_sz) != 0) {
-        printf("UAKEM Decrypt error (message: \"%s\", expected: \"%s\")\n", msg, hash);   
+        printf("UAKEM Decrypt error (message: \"%s\"(len = %d), expected: \"%s\")\n", msg, mlen, hash);   
     }
     printf("UAKEM Decrypt status: %d, time: %lf\n", dec_res, e2-s2);
 
@@ -273,6 +273,12 @@ int main() {
     test_ariphmetic(UA_512_4);
     test_ariphmetic(UA_512_5);
 
+    test_ariphmetic(UA_768_1);
+    test_ariphmetic(UA_768_2);
+    test_ariphmetic(UA_768_3);
+    test_ariphmetic(UA_768_4);
+    test_ariphmetic(UA_768_5);
+
     printf("------- Testing UA Key Encapsulation Mechanism -------\n");
     test_uakem(UA_256_1);
     test_uakem(UA_256_2);
@@ -291,6 +297,12 @@ int main() {
     test_uakem(UA_512_3);
     test_uakem(UA_512_4);
     test_uakem(UA_512_5);
+
+    test_uakem(UA_768_1);
+    test_uakem(UA_768_2);
+    test_uakem(UA_768_3);
+    test_uakem(UA_768_4);
+    test_uakem(UA_768_5);
 
     // test_sha3();
     #ifdef _WIN64
