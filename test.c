@@ -96,6 +96,64 @@ void test_eddsa(u32 curve_id) {
     printf("Signature Verification status: %d, time: %lf\n", s, e2-s2);
 }
 
+void sign_file_with_sha3(const char* filename, u32 curve_id) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        printf("Error: Unable to open file %s\n", filename);
+        return;
+    }
+
+    // Initialize curve and variables
+    Ec cur;
+    char name[60];
+    EcInitStandardCurveById(&cur, curve_id);
+    EcDump(&cur, name);
+    printf("--- Signing file using curve: %s ---\n", name);
+
+    EcSignature sig;
+    BigInt key;
+    EcPoint Q;
+
+    // Generate key pair
+    EcDsaGenerateKey(&cur, key, &Q);
+    printf("Generated ECDSA keypair\n");
+    printf("Private key d:\n");
+    GFDump(&cur, key);
+    printf("Public key Q = (x, y):\n");
+    GFDump(&cur, Q.x);
+    GFDump(&cur, Q.y);
+
+    // Compute SHA3 hash of the file
+    Sha3Engine sha3;
+    BYTE digest[512 / 8];
+    SHA3Init(&sha3, 256); // Using SHA3-256
+    BYTE buffer[1024];
+    size_t bytesRead;
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+        SHA3Update(&sha3, buffer, bytesRead);
+    }
+    fclose(file);
+    SHA3Final(&sha3, buffer, 0);
+    SHA3GetDigest(&sha3, digest);
+   
+    // Convert hash to BigInt
+    BigInt hash;
+    memset(hash, 0, sizeof(BigInt));
+    memcpy(hash, digest, 256 / 8);
+    printf("SHA3-256 hash of file %s: \n", filename);
+    GFDump(&cur, hash);
+
+    // Sign the hash
+    EcDsaSign(&cur, key, hash, &sig);
+    printf("Digital signature (r, s) for file %s:\n", filename);
+    GFDump(&cur, sig.r);
+    GFDump(&cur, sig.s);
+
+    // Verify the signature
+    int verificationStatus = EcDsaVerify(&cur, &Q, hash, &sig);
+    printf("Signature Verification status: %d\n", verificationStatus);
+}
+
 void test_uakem(u32 curve_id) {
     double s1, e1, s2, e2;
     int enc_res, dec_res;
@@ -252,7 +310,7 @@ void test_sha3() {
 
 }
 
-int main() {
+int test_main() {
     
 	printf("------- Testing EC Arithmetic -------\n");
     test_ariphmetic(UA_256_1);
@@ -308,5 +366,18 @@ int main() {
     #ifdef _WIN64
     system("pause");
     #endif
+    return 0;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s <filename>\n", argv[0]);
+        return 1;
+    }
+
+    const char* filename = argv[1];
+    printf("Signing file: %s\n", filename);
+    sign_file_with_sha3(filename, UA_256_1);
+
     return 0;
 }
