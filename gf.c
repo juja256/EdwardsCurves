@@ -5,12 +5,14 @@
 #include <stdio.h>
 #include <time.h>
 
-#ifdef _WIN64
+#if defined(__APPLE__) && defined(__aarch64__)
+#include <arm_neon.h>
+#elif defined(_WIN64)
 #include <intrin.h>
 #pragma intrinsic(_umul128) 
 #else
 #include <x86intrin.h>
-#endif // _WIN64
+#endif // platform-specific includes
 
 
 #define MAX_U64    0xFFFFFFFFFFFFFFFF

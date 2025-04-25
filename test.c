@@ -10,7 +10,11 @@
 #pragma intrinsic(_umul128) 
 #include <windows.h>
 #else
+#if defined(__APPLE__) && defined(__aarch64__)
+#include <arm_neon.h>
+#else
 #include <x86intrin.h>
+#endif // platform-specific includes
 #include <time.h>
 
 double GetTickCount(void) 
